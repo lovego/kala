@@ -1,0 +1,8 @@
+*.pyc
+*.db
+*.coverprofile
+.vscode/
+kala
+.idea/*
+.DS_Store
+vendor
