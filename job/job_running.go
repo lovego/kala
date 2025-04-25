@@ -5,11 +5,9 @@ import (
 	"errors"
 
 	"github.com/garyburd/redigo/redis"
-	"github.com/lovego/config/db/redisdb"
 )
 
 var (
-	pool                  = redisdb.Pool("default")
 	runningKeyPrefix      = "kala-job-running"
 	concurrency           = 2 // max concurrency jobs for every group name
 	ErrJobIsRunning       = errors.New("job is running")

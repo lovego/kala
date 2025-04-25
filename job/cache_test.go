@@ -5,14 +5,31 @@ import (
 	"testing"
 	"time"
 
+	"github.com/garyburd/redigo/redis"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	pool = &redis.Pool{
+		MaxIdle:     2,
+		MaxActive:   10,
+		IdleTimeout: 600 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			return redis.DialURL(
+				"redis://:@localhost:6379/0",
+				redis.DialConnectTimeout(3*time.Second),
+				redis.DialReadTimeout(3*time.Second),
+				redis.DialWriteTimeout(3*time.Second),
+			)
+		},
+	}
+}
 
 // This file contains tests for specific JobCaches.
 
 func TestCacheStart(t *testing.T) {
 	cache := NewMockCache()
-	cache.Start(time.Hour, time.Hour)
+	cache.Start(pool, time.Hour, time.Hour)
 }
 
 func TestCacheRetainShouldRemoveOldJobStats(t *testing.T) {
@@ -30,7 +47,7 @@ func TestCacheRetainShouldRemoveOldJobStats(t *testing.T) {
 	jobs = append(jobs, j)
 	mockDb.response = jobs
 
-	cache.Start(0, 1*time.Minute) // Retain 1 minute
+	cache.Start(pool, 0, 1*time.Minute) // Retain 1 minute
 	j.lock.RLock()
 	assert.Equal(t, 5, len(j.Stats))
 	j.lock.RUnlock()
@@ -58,7 +75,7 @@ func TestCacheStartStartsARecurringJobWithStartDateInThePast(t *testing.T) {
 	jobs = append(jobs, j)
 	mockDb.response = jobs
 
-	cache.Start(0, -1)
+	cache.Start(pool, 0, -1)
 	time.Sleep(time.Second * 2)
 
 	j.lock.RLock()
@@ -83,7 +100,7 @@ func TestCacheStartCanResumeJobAtNextScheduledPoint(t *testing.T) {
 	jobs = append(jobs, j)
 	mockDb.response = jobs
 
-	cache.Start(0, -1)
+	cache.Start(pool, 0, -1)
 
 	// After 1 second, the job should not have run.
 	time.Sleep(time.Second * 1)

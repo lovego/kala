@@ -2,10 +2,8 @@ package api
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
-	"github.com/lovego/errs"
 	"github.com/lovego/goa"
 	"github.com/lovego/kala/job"
 	"github.com/lovego/kala/types"
@@ -20,6 +18,10 @@ const (
 	MAX_BODY_SIZE       = 1048576
 	READ_HEADER_TIMEOUT = 0
 )
+
+type apiError struct {
+	Error string `json:"error"`
+}
 
 // HandleKalaStatsRequest is the handler for getting system-level metrics
 // /api/v1/stats
@@ -65,12 +67,12 @@ func HandleAddJob(cache job.JobCache, defaultOwner string) func(*goa.Context) {
 	return func(c *goa.Context) {
 		body, err := c.RequestBody()
 		if err != nil {
-			errorEncodeJSON(errs.Trace(err), http.StatusBadRequest, c.ResponseWriter)
+			c.StatusJson(http.StatusBadRequest, apiError{Error: err.Error()})
 			return
 		}
 		newJob := &job.Job{}
 		if err := json.Unmarshal(body, newJob); err != nil {
-			errorEncodeJSON(errs.Trace(err), http.StatusBadRequest, c.ResponseWriter)
+			c.StatusJson(http.StatusBadRequest, apiError{Error: err.Error()})
 			return
 		}
 		if defaultOwner != "" && newJob.Owner == "" {
@@ -78,7 +80,7 @@ func HandleAddJob(cache job.JobCache, defaultOwner string) func(*goa.Context) {
 		}
 		err = newJob.Init(cache)
 		if err != nil {
-			errorEncodeJSON(errs.Trace(err), http.StatusInternalServerError, c.ResponseWriter)
+			c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
 			return
 		}
 		c.StatusJson(http.StatusCreated, &types.AddJobResponse{Id: newJob.Id})
@@ -92,7 +94,7 @@ func HandleJobGetRequest(cache job.JobCache) func(c *goa.Context) {
 
 		j, err := cache.Get(id)
 		if err != nil {
-			errorEncodeJSON(errs.Trace(err), http.StatusNotFound, c.ResponseWriter)
+			c.StatusJson(http.StatusNotFound, apiError{Error: err.Error()})
 			return
 		}
 		if j == nil {
@@ -103,22 +105,22 @@ func HandleJobGetRequest(cache job.JobCache) func(c *goa.Context) {
 	}
 }
 
-// HandleJobRequest routes requests to /api/v1/job/{id} to DELETE a job.
+// HandleJobDeleteRequest routes requests to /api/v1/job/{id} to DELETE a job.
 func HandleJobDeleteRequest(cache job.JobCache) func(c *goa.Context) {
 	return func(c *goa.Context) {
 		id := c.Param(0)
 
 		j, err := cache.Get(id)
 		if err != nil {
-			errorEncodeJSON(errs.Trace(err), http.StatusBadRequest, c.ResponseWriter)
+			c.StatusJson(http.StatusBadRequest, apiError{Error: err.Error()})
 			return
 		}
 		if j == nil {
-			c.WriteHeader(http.StatusNotFound)
+			c.WriteHeader(http.StatusNoContent)
 			return
 		}
 		if err := j.Delete(cache); err != nil {
-			errorEncodeJSON(errs.Trace(err), http.StatusInternalServerError, c.ResponseWriter)
+			c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
 		} else {
 			c.WriteHeader(http.StatusNoContent)
 		}
@@ -130,7 +132,7 @@ func HandleJobDeleteRequest(cache job.JobCache) func(c *goa.Context) {
 func HandleDeleteAllJobs(cache job.JobCache) func(c *goa.Context) {
 	return func(c *goa.Context) {
 		if err := job.DeleteAll(cache); err != nil {
-			errorEncodeJSON(errs.Trace(err), http.StatusInternalServerError, c.ResponseWriter)
+			c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
 		} else {
 			c.WriteHeader(http.StatusNoContent)
 		}
@@ -166,7 +168,7 @@ func HandleDisableJobRequest(cache job.JobCache) func(c *goa.Context) {
 		}
 
 		if err := j.Disable(cache); err != nil {
-			errorEncodeJSON(errs.Trace(err), http.StatusInternalServerError, c.ResponseWriter)
+			c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
 			return
 		}
 		c.WriteHeader(http.StatusNoContent)
@@ -185,25 +187,11 @@ func HandleEnableJobRequest(cache job.JobCache) func(c *goa.Context) {
 		}
 
 		if err := j.Enable(cache); err != nil {
-			errorEncodeJSON(errs.Trace(err), http.StatusInternalServerError, c.ResponseWriter)
+			c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
 			return
 		}
 		c.WriteHeader(http.StatusNoContent)
 	}
-}
-
-type apiError struct {
-	Error string `json:"error"`
-}
-
-func errorEncodeJSON(errToEncode error, status int, w http.ResponseWriter) {
-	log.Println(errs.WithStack(errToEncode))
-	js, err := json.Marshal(apiError{Error: errToEncode.Error()})
-	if err != nil {
-		return
-	}
-	w.Header().Set(contentType, jsonContentType)
-	http.Error(w, string(js), status)
 }
 
 // SetupApiRoutes is used within main to initialize all of the routes

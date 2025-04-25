@@ -7,8 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/lovego/config"
 )
 
 type webuiData struct {
@@ -16,18 +14,20 @@ type webuiData struct {
 	fileInfo os.FileInfo
 }
 
-var webuiDataMap = make(map[string]webuiData)
+var (
+	webuiDataMap = make(map[string]webuiData)
+)
 
-func init() {
+func initWebui(webuiPath string) {
 	for name := range _bindata {
-		if err := initWebuiData(name); err != nil {
+		if err := initWebuiData(webuiPath, name); err != nil {
 			log.Panic("init webui data error:" + name)
 		}
 	}
 }
 
-func initWebuiData(name string) error {
-	path := filepath.Join(config.Root(), name)
+func initWebuiData(webuiPath, name string) error {
+	path := filepath.Join(webuiPath, name)
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return err

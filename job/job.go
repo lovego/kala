@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lovego/config"
 	"github.com/lovego/kala/types"
 	"github.com/lovego/kala/utils/iso8601"
+	"github.com/lovego/logger"
 	"github.com/mixer/clock"
 	uuid "github.com/nu7hatch/gouuid"
 )
@@ -27,7 +27,7 @@ var (
 	ErrInvalidRemoteJob = errors.New("Invalid Remote Job. Job's must contain a Name and a url field")
 	ErrInvalidJobType   = errors.New("Invalid Job type. Types supported: 0 for local and 1 for remote")
 
-	Logger = config.NewLogger("cron/scheduler.log")
+	Logger = logger.New(bytes.NewBuffer(nil))
 )
 
 type Job struct {

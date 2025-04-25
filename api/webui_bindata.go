@@ -320,7 +320,8 @@ func _filePath(dir, name string) string {
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
 
-func AssetFS() *assetfs.AssetFS {
+func AssetFS(webPath string) *assetfs.AssetFS {
+	initWebui(webPath)
 	assetInfo := func(path string) (os.FileInfo, error) {
 		return os.Stat(path)
 	}

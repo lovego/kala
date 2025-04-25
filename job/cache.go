@@ -10,11 +10,13 @@ import (
 	"time"
 
 	"github.com/cornelk/hashmap"
+	"github.com/garyburd/redigo/redis"
 	"github.com/lovego/kala/types"
 )
 
 var (
 	ErrJobDoesntExist = errors.New("The job you requested does not exist")
+	pool              *redis.Pool
 )
 
 type JobCache interface {
@@ -221,10 +223,11 @@ func NewLockFreeJobCache(jobDB JobDB) *LockFreeJobCache {
 	}
 }
 
-func (c *LockFreeJobCache) Start(persistWaitTime time.Duration, jobstatTtl time.Duration) {
+func (c *LockFreeJobCache) Start(redisPool *redis.Pool, persistWaitTime time.Duration, jobstatTtl time.Duration) {
 	if persistWaitTime == 0 {
 		c.PersistOnWrite = true
 	}
+	pool = redisPool
 
 	// Prep cache
 	allJobs, err := c.jobDB.GetAll()
@@ -409,4 +412,8 @@ func (c *LockFreeJobCache) RetainEvery(retentionWaitTime time.Duration) {
 			Logger.Errorf("Error occurred during invoking retention. Err: %s", err)
 		}
 	}
+}
+
+func SetForTest(redisPool *redis.Pool) {
+	pool = redisPool
 }
