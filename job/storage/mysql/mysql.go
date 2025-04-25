@@ -9,7 +9,6 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/lovego/kala/job"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -23,15 +22,15 @@ type DB struct {
 // New instantiates a new DB.
 func New(dsn string, tlsConfig *tls.Config) *DB {
 	if tlsConfig != nil {
-		log.Infof("Register TLS config")
+		job.Logger.Infof("Register TLS config")
 		err := mysql.RegisterTLSConfig("custom", tlsConfig)
 		if err != nil {
-			log.Fatal(err)
+			job.Logger.Fatal(err)
 		}
 	}
 	connection, err := sqlx.Open("mysql", dsn)
 	if err != nil {
-		log.Fatal(err)
+		job.Logger.Fatal(err)
 	}
 	// passive attempt to create table
 	_, _ = connection.Exec(fmt.Sprintf(`create table %s (id varchar(36), job JSON, primary key (id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`, TableName))

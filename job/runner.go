@@ -12,18 +12,16 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/lovego/kala/types"
 	"github.com/mattn/go-shellwords"
-	log "github.com/sirupsen/logrus"
 )
-
-const HTTP_CODE_OK = 200
 
 type JobRunner struct {
 	job              *Job
-	meta             Metadata
+	meta             types.Metadata
 	numberOfAttempts uint
 	currentRetries   uint
-	currentStat      *JobStat
+	currentStat      *types.JobStat
 }
 
 var (
@@ -36,7 +34,7 @@ var (
 
 // Run calls the appropriate run function, collects metadata around the success
 // or failure of the Job's execution, and schedules the next run.
-func (j *JobRunner) Run(cache JobCache) (*JobStat, Metadata, error) {
+func (j *JobRunner) Run(cache JobCache) (*types.JobStat, types.Metadata, error) {
 	j.job.lock.RLock()
 	defer j.job.lock.RUnlock()
 
@@ -44,15 +42,26 @@ func (j *JobRunner) Run(cache JobCache) (*JobStat, Metadata, error) {
 
 	_, err := cache.Get(j.job.Id)
 	if errors.Is(err, ErrJobDoesntExist) {
-		log.Infof("Job %s with id %s tried to run, but exited early because it has benn deleted", j.job.Name, j.job.Id)
+		Logger.Infof("Job %s with id %s tried to run, but exited early because it has benn deleted", j.job.Name, j.job.Id)
 		return nil, j.meta, ErrJobDeleted
 	}
 	if j.job.Disabled {
-		log.Infof("Job %s tried to run, but exited early because its disabled.", j.job.Name)
+		Logger.Infof("Job %s tried to run, but exited early because its disabled.", j.job.Name)
 		return nil, j.meta, ErrJobDisabled
 	}
+	err = j.job.start()
+	if err != nil {
+		return nil, j.meta, err
+	}
+	defer func() {
+		err := j.job.finish()
+		if err != nil {
+			Logger.Errorf("Job %s finished error: %s.", j.job.Name, err.Error())
+		}
+	}()
 
-	log.Infof("Job %s:%s started.", j.job.Name, j.job.Id)
+	Logger.Infof("Job %s:%s started.", j.job.Name, j.job.Id)
+	defer Logger.Infof("Job %s:%s finished.", j.job.Name, j.job.Id)
 
 	j.runSetup()
 
@@ -62,19 +71,16 @@ func (j *JobRunner) Run(cache JobCache) (*JobStat, Metadata, error) {
 		switch {
 		case j.job.succeedInstantly:
 			out = "Job succeeded instantly for test purposes."
-		case j.job.JobType == LocalJob:
+		case j.job.JobType == types.LocalJob:
 			out, err = j.LocalRun()
-		case j.job.JobType == RemoteJob:
+		case j.job.JobType == types.RemoteJob:
 			out, err = j.RemoteRun()
 		default:
 			err = ErrJobTypeInvalid
 		}
 
 		if err != nil {
-			// Log Error in Metadata
-			// TODO - Error Reporting, email error
-			log.Errorln("Error running job:", j.currentStat.JobId)
-			log.Errorln(err)
+			j.currentStat.Error = err.Error()
 
 			j.meta.ErrorCount++
 			j.meta.LastError = j.job.clk.Time().Now()
@@ -88,15 +94,13 @@ func (j *JobRunner) Run(cache JobCache) (*JobStat, Metadata, error) {
 			j.collectStats(false)
 			j.meta.NumberOfFinishedRuns++
 
-			// TODO: Wrap error into something better.
 			return j.currentStat, j.meta, err
 		} else {
 			break
 		}
 	}
 
-	log.Infof("Job %s:%s finished.", j.job.Name, j.job.Id)
-	log.Debugf("Job %s:%s output: %s", j.job.Name, j.job.Id, out)
+	Logger.Debugf("Job %s:%s output: %s", j.job.Name, j.job.Id, out)
 	j.meta.SuccessCount++
 	j.meta.NumberOfFinishedRuns++
 	j.meta.LastSuccess = j.job.clk.Time().Now()
@@ -108,7 +112,7 @@ func (j *JobRunner) Run(cache JobCache) (*JobStat, Metadata, error) {
 		for _, id := range j.job.DependentJobs {
 			newJob, err := cache.Get(id)
 			if err != nil {
-				log.Errorf("Error retrieving dependent job with id of %s", id)
+				Logger.Errorf("Error retrieving dependent job with id of %s", id)
 			} else {
 				newJob.Run(cache)
 			}
@@ -270,7 +274,11 @@ func (j *JobRunner) runSetup() {
 }
 
 func (j *JobRunner) collectStats(success bool) {
-	j.currentStat.ExecutionDuration = j.job.clk.Time().Now().Sub(j.currentStat.RanAt)
+	now := time.Now()
+	duration := j.job.clk.Time().Now().Sub(j.currentStat.RanAt)
+	j.currentStat.FinishAt = &now
+	j.currentStat.ExecutionDuration = duration.Milliseconds()
+	j.currentStat.Duration = duration.String()
 	j.currentStat.Success = success
 	j.currentStat.NumberOfRetries = j.job.Retries - j.currentRetries
 }
@@ -281,7 +289,7 @@ func (j *JobRunner) checkExpected(statusCode int) bool {
 
 	// If no expected response codes passed, add 200 status code as expected
 	if len(j.job.RemoteProperties.ExpectedResponseCodes) == 0 {
-		j.job.RemoteProperties.ExpectedResponseCodes = append(j.job.RemoteProperties.ExpectedResponseCodes, HTTP_CODE_OK)
+		j.job.RemoteProperties.ExpectedResponseCodes = append(j.job.RemoteProperties.ExpectedResponseCodes, http.StatusOK)
 	}
 	for _, expected := range j.job.RemoteProperties.ExpectedResponseCodes {
 		if expected == statusCode {

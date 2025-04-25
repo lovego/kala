@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/lovego/kala/job"
 	"github.com/lovego/kala/types"
 )
 
@@ -25,7 +24,7 @@ var (
 
 	ErrGenericError = errors.New("An error occurred performing your request")
 
-	jobPath = types.JobPath[:len(types.JobPath)-1]
+	jobPath = types.JobPath
 )
 
 // KalaClient is the base struct for this package.
@@ -38,11 +37,7 @@ type KalaClient struct {
 // 		c := New("http://127.0.0.1:8000")
 func New(apiEndpoint string) *KalaClient {
 	apiEndpoint = strings.TrimSuffix(apiEndpoint, "/")
-	apiUrlPrefix := types.ApiUrlPrefix[:len(types.ApiUrlPrefix)-1]
-
-	return &KalaClient{
-		apiEndpoint: apiEndpoint + apiUrlPrefix,
-	}
+	return &KalaClient{apiEndpoint: apiEndpoint + types.ApiUrlPrefix}
 }
 
 func (kc *KalaClient) encode(value interface{}) (io.Reader, error) {
@@ -64,7 +59,16 @@ func (kc *KalaClient) decode(body io.Reader, target interface{}) error {
 }
 
 func (kc *KalaClient) url(parts ...string) string {
-	return strings.Join(append([]string{kc.apiEndpoint}, parts...), "/") + "/"
+	url := kc.apiEndpoint
+	for i := range parts {
+		parts[i] = strings.TrimSuffix(parts[i], "/")
+		if strings.HasPrefix(parts[i], "/") {
+			url += parts[i]
+		} else {
+			url += "/" + parts[i]
+		}
+	}
+	return url
 }
 
 func (kc *KalaClient) do(method, url string, expectedStatus int, payload, target interface{}) (
@@ -94,13 +98,13 @@ func (kc *KalaClient) do(method, url string, expectedStatus int, payload, target
 // Name and Command fields are the only ones that are required.
 // Example:
 // 		c := New("http://127.0.0.1:8000")
-// 		body := &job.Job{
+// 		body := &types.Job{
 //			Schedule: "R2/2015-06-04T19:25:16.828696-07:00/PT10S",
 //			Name:	  "test_job",
 //			Command:  "bash -c 'date'",
 //		}
 //		id, err := c.CreateJob(body)
-func (kc *KalaClient) CreateJob(body *job.Job) (string, error) {
+func (kc *KalaClient) CreateJob(body *types.Job) (string, error) {
 	id := &types.AddJobResponse{}
 	_, err := kc.do(methodPost, kc.url(jobPath), http.StatusCreated, body, id)
 	if err != nil {
@@ -117,7 +121,7 @@ func (kc *KalaClient) CreateJob(body *job.Job) (string, error) {
 // 		c := New("http://127.0.0.1:8000")
 //		id := "93b65499-b211-49ce-57e0-19e735cc5abd"
 //		job, err := c.GetJob(id)
-func (kc *KalaClient) GetJob(id string) (*job.Job, error) {
+func (kc *KalaClient) GetJob(id string) (*types.Job, error) {
 	j := &types.JobResponse{}
 	_, err := kc.do(methodGet, kc.url(jobPath, id), http.StatusOK, nil, j)
 	if err != nil {
@@ -129,12 +133,12 @@ func (kc *KalaClient) GetJob(id string) (*job.Job, error) {
 	return j.Job, nil
 }
 
-// GetAllJobs returns a map of string (ID's) to job.Job's which contains
+// GetAllJobs returns a map of string (ID's) to types.Job's which contains
 // all Jobs currently within Kala.
 // Example:
 // 		c := New("http://127.0.0.1:8000")
 //		jobs, err := c.GetAllJobs()
-func (kc *KalaClient) GetAllJobs() (map[string]*job.Job, error) {
+func (kc *KalaClient) GetAllJobs() (map[string]*types.Job, error) {
 	jobs := &types.ListJobsResponse{}
 	_, err := kc.do(methodGet, kc.url(jobPath), http.StatusOK, nil, jobs)
 	return jobs.Jobs, err
@@ -169,7 +173,7 @@ func (kc *KalaClient) DeleteAllJobs() (bool, error) {
 // 		c := New("http://127.0.0.1:8000")
 //		id := "93b65499-b211-49ce-57e0-19e735cc5abd"
 //		stats, err := c.GetJobStats(id)
-func (kc *KalaClient) GetJobStats(id string) ([]*job.JobStat, error) {
+func (kc *KalaClient) GetJobStats(id string) ([]*types.JobStat, error) {
 	js := &types.ListJobStatsResponse{}
 	_, err := kc.do(methodGet, kc.url(jobPath, "stats", id), http.StatusOK, nil, js)
 	return js.JobStats, err
@@ -195,7 +199,7 @@ func (kc *KalaClient) StartJob(id string) (bool, error) {
 // Example:
 // 		c := New("http://127.0.0.1:8000")
 //		stats, err := c.GetKalaStats()
-func (kc *KalaClient) GetKalaStats() (*job.KalaStats, error) {
+func (kc *KalaClient) GetKalaStats() (*types.KalaStats, error) {
 	ks := &types.KalaStatsResponse{}
 	_, err := kc.do(methodGet, kc.url("stats"), http.StatusOK, nil, ks)
 	return ks.Stats, err

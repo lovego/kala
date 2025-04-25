@@ -2,26 +2,13 @@ package job
 
 import (
 	"time"
+
+	"github.com/lovego/kala/types"
 )
 
-// KalaStats is the struct for storing app-level metrics
-type KalaStats struct {
-	ActiveJobs   int `json:"active_jobs"`
-	DisabledJobs int `json:"disabled_jobs"`
-	Jobs         int `json:"jobs"`
-
-	ErrorCount   uint `json:"error_count"`
-	SuccessCount uint `json:"success_count"`
-
-	NextRunAt        time.Time `json:"next_run_at"`
-	LastAttemptedRun time.Time `json:"last_attempted_run"`
-
-	CreatedAt time.Time `json:"created"`
-}
-
 // NewKalaStats is used to easily generate a current app-level metrics report.
-func NewKalaStats(cache JobCache) *KalaStats {
-	ks := &KalaStats{
+func NewKalaStats(cache JobCache) *types.KalaStats {
+	ks := &types.KalaStats{
 		CreatedAt: time.Now(),
 	}
 	jobs := cache.GetAll()
@@ -70,17 +57,8 @@ func NewKalaStats(cache JobCache) *KalaStats {
 	return ks
 }
 
-// JobStat is used to store metrics about a specific Job .Run()
-type JobStat struct {
-	JobId             string        `json:"job_id"`
-	RanAt             time.Time     `json:"ran_at"`
-	NumberOfRetries   uint          `json:"number_of_retries"`
-	Success           bool          `json:"success"`
-	ExecutionDuration time.Duration `json:"execution_duration"`
-}
-
-func NewJobStat(id string) *JobStat {
-	return &JobStat{
+func NewJobStat(id string) *types.JobStat {
+	return &types.JobStat{
 		JobId: id,
 		RanAt: time.Now(),
 	}

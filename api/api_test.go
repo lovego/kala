@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/lovego/kala/job"
+	"github.com/lovego/kala/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -382,10 +383,10 @@ func (a *ApiTestSuite) TestHandleKalaStatsRequest() {
 	jobTwo.Run(cache)
 
 	r := mux.NewRouter()
-	r.HandleFunc(ApiUrlPrefix+"stats", HandleKalaStatsRequest(cache)).Methods("GET")
+	r.HandleFunc(types.ApiUrlPrefix+"stats", HandleKalaStatsRequest(cache)).Methods("GET")
 	ts := httptest.NewServer(r)
 
-	_, req := setupTestReq(a.T(), "GET", ts.URL+ApiUrlPrefix+"stats", nil)
+	_, req := setupTestReq(a.T(), "GET", ts.URL+types.ApiUrlPrefix+"stats", nil)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

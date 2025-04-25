@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/lovego/kala/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,10 +18,12 @@ var getWaitDurationTableTests = []struct {
 	{
 		JobFunc: func() *Job {
 			return &Job{
-				// Schedule time is passed
-				Schedule: "R/2015-10-17T11:44:54.389361-07:00/PT10S",
-				Metadata: Metadata{
-					LastAttemptedRun: time.Now(),
+				Job: &types.Job{
+					// Schedule time is passed
+					Schedule: "R/2015-10-17T11:44:54.389361-07:00/PT10S",
+					Metadata: types.Metadata{
+						LastAttemptedRun: time.Now(),
+					},
 				},
 			}
 		},
@@ -31,10 +33,12 @@ var getWaitDurationTableTests = []struct {
 	{
 		JobFunc: func() *Job {
 			return &Job{
-				// Schedule time is passed
-				Schedule: "R/2015-10-17T11:44:54.389361-07:00/PT1M",
-				Metadata: Metadata{
-					LastAttemptedRun: time.Now(),
+				Job: &types.Job{
+					// Schedule time is passed
+					Schedule: "R/2015-10-17T11:44:54.389361-07:00/PT1M",
+					Metadata: types.Metadata{
+						LastAttemptedRun: time.Now(),
+					},
 				},
 			}
 		},
@@ -44,10 +48,12 @@ var getWaitDurationTableTests = []struct {
 	{
 		JobFunc: func() *Job {
 			return &Job{
-				// Schedule time is passed, no repetitions
-				Schedule: "R0/2015-10-17T11:44:54.389361-07:00/",
-				Metadata: Metadata{
-					LastAttemptedRun: time.Time{},
+				Job: &types.Job{
+					// Schedule time is passed, no repetitions
+					Schedule: "R0/2015-10-17T11:44:54.389361-07:00/",
+					Metadata: types.Metadata{
+						LastAttemptedRun: time.Time{},
+					},
 				},
 			}
 		},
@@ -57,10 +63,12 @@ var getWaitDurationTableTests = []struct {
 	{
 		JobFunc: func() *Job {
 			return &Job{
-				// Schedule time is passed
-				Schedule: "R/2015-10-17T11:44:54.389361-07:00/P1D",
-				Metadata: Metadata{
-					LastAttemptedRun: time.Now(),
+				Job: &types.Job{
+					// Schedule time is passed
+					Schedule: "R/2015-10-17T11:44:54.389361-07:00/P1D",
+					Metadata: types.Metadata{
+						LastAttemptedRun: time.Now(),
+					},
 				},
 			}
 		},
@@ -75,7 +83,7 @@ func TestGetWatiDuration(t *testing.T) {
 		err := testStruct.Job.InitDelayDuration(false)
 		assert.NoError(t, err)
 		actualDuration := testStruct.Job.GetWaitDuration()
-		log.Warnf("LastAttempted: %s", testStruct.Job.Metadata.LastAttemptedRun)
+		Logger.Errorf("LastAttempted: %s", testStruct.Job.Metadata.LastAttemptedRun)
 		assert.InDelta(t, float64(testStruct.ExpectedDuration), float64(actualDuration), float64(time.Millisecond*50), "Test of "+testStruct.Name)
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lovego/kala/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +20,7 @@ func TestRemoteJobRunner(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	mockRemoteJob := GetMockRemoteJob(RemoteProperties{
+	mockRemoteJob := GetMockRemoteJob(types.RemoteProperties{
 		Url: testServer.URL,
 	})
 
@@ -40,7 +41,7 @@ func TestRemoteJobBadStatus(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	mockRemoteJob := GetMockRemoteJob(RemoteProperties{
+	mockRemoteJob := GetMockRemoteJob(types.RemoteProperties{
 		Url: testServer.URL,
 	})
 
@@ -58,7 +59,7 @@ func TestRemoteJobBadStatusSuccess(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	mockRemoteJob := GetMockRemoteJob(RemoteProperties{
+	mockRemoteJob := GetMockRemoteJob(types.RemoteProperties{
 		Url:                   testServer.URL,
 		ExpectedResponseCodes: []int{500},
 	})

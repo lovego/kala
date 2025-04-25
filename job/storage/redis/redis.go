@@ -3,7 +3,6 @@ package redis
 import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/lovego/kala/job"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -29,7 +28,7 @@ func New(address string, password redis.DialOption, sendPassword bool) *DB {
 		conn, err = redis.Dial("tcp", address)
 	}
 	if err != nil {
-		log.Fatal(err)
+		job.Logger.Fatal(err)
 	}
 	return &DB{
 		conn: conn,

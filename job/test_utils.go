@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lovego/kala/types"
 	"github.com/lovego/kala/utils/iso8601"
 )
 
@@ -43,28 +44,35 @@ func NewMockCache() *LockFreeJobCache {
 
 func GetMockJob() *Job {
 	return &Job{
-		Name:    "mock_job",
-		Command: "bash -c 'date'",
-		Owner:   "example@example.com",
-		Retries: 2,
+		Job: &types.Job{
+			Name:    "mock_job",
+			Command: "bash -c 'date'",
+			Owner:   "example@example.com",
+			Retries: 2,
+		},
 	}
 }
 
 func GetMockFailingJob() *Job {
 	return &Job{
-		Name:    "mock_failing_job",
-		Command: "asdf",
-		Owner:   "example@example.com",
-		Retries: 2,
+		Job: &types.Job{
+			Name:    "mock_failing_job",
+			Command: "asdf",
+			Owner:   "example@example.com",
+			Retries: 2,
+		},
 	}
 }
 
-func GetMockRemoteJob(props RemoteProperties) *Job {
+func GetMockRemoteJob(props types.RemoteProperties) *Job {
 	return &Job{
-		Name:             "mock_remote_job",
-		Command:          "",
-		JobType:          RemoteJob,
-		RemoteProperties: props,
+		Job: &types.Job{
+			Name:             "mock_remote_job",
+			GroupName:        fmt.Sprintf("%d", time.Now().UnixNano()),
+			Command:          "",
+			JobType:          types.RemoteJob,
+			RemoteProperties: props,
+		},
 	}
 }
 
@@ -93,10 +101,10 @@ func GetMockRecurringJobWithSchedule(scheduleTime time.Time, delay string) *Job 
 	return genericMockJob
 }
 
-func GetMockJobStats(oldDate time.Time, count int) []*JobStat {
-	stats := make([]*JobStat, 0)
+func GetMockJobStats(oldDate time.Time, count int) []*types.JobStat {
+	stats := make([]*types.JobStat, 0)
 	for i := 1; i <= count; i++ {
-		el := &JobStat{
+		el := &types.JobStat{
 			JobId:             "stats-id-" + fmt.Sprint(i),
 			NumberOfRetries:   0,
 			ExecutionDuration: 10000,

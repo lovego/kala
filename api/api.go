@@ -8,14 +8,11 @@ import (
 	"github.com/lovego/errs"
 	"github.com/lovego/goa"
 	"github.com/lovego/kala/job"
+	"github.com/lovego/kala/types"
 )
 
 const (
-	// Base API v1 Path
-	ApiUrlPrefix = "/api/v1"
-
-	JobPath    = "/job"
-	ApiJobPath = ApiUrlPrefix + JobPath
+	ApiJobPath = types.ApiUrlPrefix + types.JobPath
 
 	contentType     = "Content-Type"
 	jsonContentType = "application/json;charset=UTF-8"
@@ -24,20 +21,12 @@ const (
 	READ_HEADER_TIMEOUT = 0
 )
 
-type KalaStatsResponse struct {
-	Stats *job.KalaStats
-}
-
 // HandleKalaStatsRequest is the handler for getting system-level metrics
 // /api/v1/stats
 func HandleKalaStatsRequest(cache job.JobCache) func(c *goa.Context) {
 	return func(c *goa.Context) {
-		c.StatusJson(http.StatusOK, &KalaStatsResponse{Stats: job.NewKalaStats(cache)})
+		c.StatusJson(http.StatusOK, &types.KalaStatsResponse{Stats: job.NewKalaStats(cache)})
 	}
-}
-
-type ListJobStatsResponse struct {
-	JobStats []*job.JobStat `json:"job_stats"`
 }
 
 // HandleListJobStatsRequest is the handler for getting job-specific stats
@@ -50,12 +39,8 @@ func HandleListJobStatsRequest(cache job.JobCache) func(c *goa.Context) {
 			c.WriteHeader(http.StatusNotFound)
 			return
 		}
-		c.StatusJson(http.StatusOK, &ListJobStatsResponse{JobStats: j.Stats})
+		c.StatusJson(http.StatusOK, &types.ListJobStatsResponse{JobStats: j.Stats})
 	}
-}
-
-type ListJobsResponse struct {
-	Jobs map[string]*job.Job `json:"jobs"`
 }
 
 // HandleListJobs responds with an array of all Jobs within the server,
@@ -66,12 +51,12 @@ func HandleListJobsRequest(cache job.JobCache) func(c *goa.Context) {
 		allJobs.Lock.RLock()
 		defer allJobs.Lock.RUnlock()
 
-		c.StatusJson(http.StatusOK, &ListJobsResponse{Jobs: allJobs.Jobs})
+		resp := &types.ListJobsResponse{Jobs: make(map[string]*types.Job)}
+		for k := range allJobs.Jobs {
+			resp.Jobs[k] = allJobs.Jobs[k].Job
+		}
+		c.StatusJson(http.StatusOK, resp)
 	}
-}
-
-type AddJobResponse struct {
-	Id string `json:"id"`
 }
 
 // HandleAddJob takes a job object and unmarshals it to a Job type,
@@ -96,7 +81,7 @@ func HandleAddJob(cache job.JobCache, defaultOwner string) func(*goa.Context) {
 			errorEncodeJSON(errs.Trace(err), http.StatusInternalServerError, c.ResponseWriter)
 			return
 		}
-		c.StatusJson(http.StatusCreated, &AddJobResponse{Id: newJob.Id})
+		c.StatusJson(http.StatusCreated, &types.AddJobResponse{Id: newJob.Id})
 	}
 }
 
@@ -114,7 +99,7 @@ func HandleJobGetRequest(cache job.JobCache) func(c *goa.Context) {
 			c.WriteHeader(http.StatusNoContent)
 			return
 		}
-		c.StatusJson(http.StatusOK, &JobResponse{Job: j})
+		c.StatusJson(http.StatusOK, &types.JobResponse{Job: j.Job})
 	}
 }
 
@@ -150,10 +135,6 @@ func HandleDeleteAllJobs(cache job.JobCache) func(c *goa.Context) {
 			c.WriteHeader(http.StatusNoContent)
 		}
 	}
-}
-
-type JobResponse struct {
-	Job *job.Job `json:"job"`
 }
 
 // HandleStartJobRequest is the handler for manually starting jobs
@@ -228,23 +209,23 @@ func errorEncodeJSON(errToEncode error, status int, w http.ResponseWriter) {
 // SetupApiRoutes is used within main to initialize all of the routes
 func SetupApiRoutes(router *goa.RouterGroup, cache job.JobCache, defaultOwner string) {
 	// Route for creating a job
-	router.Post(JobPath, HandleAddJob(cache, defaultOwner))
+	router.Post(types.JobPath, HandleAddJob(cache, defaultOwner))
 	// Route for deleting all jobs
-	router.Delete(JobPath+"/all", HandleDeleteAllJobs(cache))
+	router.Delete(types.JobPath+"/all", HandleDeleteAllJobs(cache))
 	// Route for deleting a job
-	router.Delete(JobPath+`/(\S+)`, HandleJobDeleteRequest(cache))
+	router.Delete(types.JobPath+`/(\S{36})`, HandleJobDeleteRequest(cache))
 	// Route for getting a job
-	router.Get(JobPath+`/(\S+)`, HandleJobGetRequest(cache))
+	router.Get(types.JobPath+`/(\S{36})`, HandleJobGetRequest(cache))
 	// Route for getting job stats
-	router.Get(JobPath+`/stats/(\S+)`, HandleListJobStatsRequest(cache))
+	router.Get(types.JobPath+`/stats/(\S{36})`, HandleListJobStatsRequest(cache))
 	// Route for listing all jops
-	router.Get(JobPath, HandleListJobsRequest(cache))
+	router.Get(types.JobPath, HandleListJobsRequest(cache))
 	// Route for manually start a job
-	router.Post(JobPath+`/start/(\S+)`, HandleStartJobRequest(cache))
+	router.Post(types.JobPath+`/start/(\S{36})`, HandleStartJobRequest(cache))
 	// Route for manually start a job
-	router.Post(JobPath+`/enable/(\S+)`, HandleEnableJobRequest(cache))
+	router.Post(types.JobPath+`/enable/(\S{36})`, HandleEnableJobRequest(cache))
 	// Route for manually disable a job
-	router.Post(JobPath+`/disable/(\S+)`, HandleDisableJobRequest(cache))
+	router.Post(types.JobPath+`/disable/(\S{36})`, HandleDisableJobRequest(cache))
 	// Route for getting app-level metrics
 	router.Get(`/stats`, HandleKalaStatsRequest(cache))
 }

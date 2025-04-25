@@ -6,16 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/lovego/config"
+	"github.com/lovego/kala/types"
 	"github.com/lovego/kala/utils/iso8601"
 	"github.com/mixer/clock"
 	uuid "github.com/nu7hatch/gouuid"
-	log "github.com/sirupsen/logrus"
 )
 
 const BASE_10 = 10
@@ -26,35 +26,12 @@ var (
 	ErrInvalidJob       = errors.New("Invalid Local Job. Job's must contain a Name and a Command field")
 	ErrInvalidRemoteJob = errors.New("Invalid Remote Job. Job's must contain a Name and a url field")
 	ErrInvalidJobType   = errors.New("Invalid Job type. Types supported: 0 for local and 1 for remote")
+
+	Logger = config.NewLogger("cron/scheduler.log")
 )
 
 type Job struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
-
-	// Email of the owner of this job
-	// e.g. "admin@example.com"
-	Owner string `json:"owner"`
-
-	// Command to run
-	// e.g. "bash /path/to/my/script.sh"
-	Command string `json:"command"`
-
-	// Is this job disabled?
-	Disabled bool `json:"disabled"`
-
-	// Jobs that are dependent upon this one will be run after this job runs.
-	DependentJobs []string `json:"dependent_jobs"`
-
-	// List of ids of jobs that this job is dependent upon.
-	ParentJobs []string `json:"parent_jobs"`
-
-	// Job that gets run after all retries have failed consecutively
-	OnFailureJob string `json:"on_failure_job"`
-
-	// ISO 8601 String
-	// e.g. "R/2014-03-08T20:00:00.000Z/PT2H"
-	Schedule     string `json:"schedule"`
+	*types.Job
 	scheduleTime time.Time
 	// ISO 8601 Duration struct, used for scheduling
 	// job after each run.
@@ -64,54 +41,14 @@ type Job struct {
 	// first run.
 	timesToRepeat int64
 
-	// Number of times to retry on failed attempt for each run.
-	Retries uint `json:"retries"`
-
-	// Duration in which it is safe to retry the Job.
-	Epsilon         string `json:"epsilon"`
 	epsilonDuration *iso8601.Duration
 
-	jobTimer  clock.Timer
-	NextRunAt time.Time `json:"next_run_at"`
-
-	// Templating delimiters, the left & right separated by space,
-	// for example `{{ }}` or `${ }`.
-	//
-	// If this field is non-empty, then each time this
-	// job is executed, Kala will template its main
-	// content as a Go Template with the job itself as data.
-	//
-	// The Command is templated for local jobs,
-	// and Url and Body in RemoteProperties.
-	TemplateDelimiters string
+	jobTimer clock.Timer
 
 	// The clock for this job; used to mock time during tests.
 	clk Clock
 
-	// If the job is disabled (or the system inoperative) and we pass
-	// the scheduled run point, when the job becomes active again,
-	// normally the job will run immediately.
-	// With this setting on, it will not run immediately, but will wait
-	// until the next scheduled run time comes along.
-	ResumeAtNextScheduledTime bool `json:"resume_at_next_scheduled_time"`
-
-	// Meta data about successful and failed runs.
-	Metadata Metadata `json:"metadata"`
-
-	// Type of the job
-	JobType jobType `json:"type"`
-
-	// Custom properties for the remote job type
-	RemoteProperties RemoteProperties `json:"remote_properties"`
-
-	// Collection of Job Stats
-	Stats []*JobStat `json:"stats"`
-
 	lock sync.RWMutex
-
-	// Says if a job has been executed right numbers of time
-	// and should not been executed again in the future
-	IsDone bool `json:"is_done"`
 
 	// The job will send on this channel when it's done running; used for tests.
 	// Note that if the job should be rescheduled, it will send on this channel
@@ -121,40 +58,6 @@ type Job struct {
 
 	// Used for testing schedules.
 	succeedInstantly bool
-}
-
-type jobType int
-
-const (
-	LocalJob jobType = iota
-	RemoteJob
-)
-
-// RemoteProperties Custom properties for the remote job type
-type RemoteProperties struct {
-	Url    string `json:"url"`
-	Method string `json:"method"`
-
-	// A body to attach to the http request
-	Body string `json:"body"`
-
-	// A list of headers to add to http request (e.g. [{"key": "charset", "value": "UTF-8"}])
-	Headers http.Header `json:"headers"`
-
-	// A timeout property for the http request in seconds
-	Timeout int `json:"timeout"`
-
-	// A list of expected response codes (e.g. [200, 201])
-	ExpectedResponseCodes []int `json:"expected_response_codes"`
-}
-
-type Metadata struct {
-	SuccessCount         uint      `json:"success_count"`
-	LastSuccess          time.Time `json:"last_success"`
-	ErrorCount           uint      `json:"error_count"`
-	LastError            time.Time `json:"last_error"`
-	LastAttemptedRun     time.Time `json:"last_attempted_run"`
-	NumberOfFinishedRuns uint      `json:"number_of_finished_runs"`
 }
 
 // Bytes returns the byte representation of the Job.
@@ -202,7 +105,7 @@ func (j *Job) Init(cache JobCache) error {
 
 	u4, err := uuid.NewV4()
 	if err != nil {
-		log.Errorf("Error occurred when generating uuid: %s", err)
+		Logger.Errorf("Error occurred when generating uuid: %s", err)
 		return err
 	}
 	j.Id = u4.String()
@@ -278,7 +181,7 @@ func (j *Job) InitDelayDuration(checkTime bool) error {
 	} else {
 		j.timesToRepeat, err = strconv.ParseInt(strings.Split(splitTime[0], "R")[1], BASE_10, 0)
 		if err != nil {
-			log.Errorf("Error converting timesToRepeat to an int: %s", err)
+			Logger.Errorf("Error converting timesToRepeat to an int: %s", err)
 			return err
 		}
 	}
@@ -287,7 +190,7 @@ func (j *Job) InitDelayDuration(checkTime bool) error {
 	if err != nil {
 		j.scheduleTime, err = time.Parse(RFC3339WithoutTimezone, splitTime[1])
 		if err != nil {
-			log.Errorf("Error converting scheduleTime to a time.Time: %s", err)
+			Logger.Errorf("Error converting scheduleTime to a time.Time: %s", err)
 			return err
 		}
 	}
@@ -297,22 +200,22 @@ func (j *Job) InitDelayDuration(checkTime bool) error {
 			return fmt.Errorf("Job %s:%s cannot be scheduled %s ago", j.Name, j.Id, diff.String())
 		}
 	}
-	log.Debugf("Job %s:%s scheduled", j.Name, j.Id)
-	log.Debugf("Starting %s will repeat for %d", j.scheduleTime, j.timesToRepeat)
+	Logger.Debugf("Job %s:%s scheduled", j.Name, j.Id)
+	Logger.Debugf("Starting %s will repeat for %d", j.scheduleTime, j.timesToRepeat)
 
 	if j.timesToRepeat != 0 {
 		j.delayDuration, err = iso8601.FromString(splitTime[2])
 		if err != nil {
-			log.Errorf("Error converting delayDuration to a iso8601.Duration: %s", err)
+			Logger.Errorf("Error converting delayDuration to a iso8601.Duration: %s", err)
 			return err
 		}
-		log.Debugf("Delay duration is %s", j.delayDuration.RelativeTo(j.clk.Time().Now()))
+		Logger.Debugf("Delay duration is %s", j.delayDuration.RelativeTo(j.clk.Time().Now()))
 	}
 
 	if j.Epsilon != "" {
 		j.epsilonDuration, err = iso8601.FromString(j.Epsilon)
 		if err != nil {
-			log.Errorf("Error converting j.Epsilon to iso8601.Duration: %s", err)
+			Logger.Errorf("Error converting j.Epsilon to iso8601.Duration: %s", err)
 			return err
 		}
 	}
@@ -326,7 +229,7 @@ func (j *Job) StartWaiting(cache JobCache, justRan bool) {
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
-	// log.Infof("Job %s:%s repeating in %s", j.Name, j.Id, waitDuration)
+	// Logger.Infof("Job %s:%s repeating in %s", j.Name, j.Id, waitDuration)
 
 	j.NextRunAt = j.clk.Time().Now().Add(waitDuration)
 
@@ -441,7 +344,7 @@ func (j *Job) DeleteFromDependentJobs(cache JobCache) error {
 
 		// If there are no other parent jobs, delete this job.
 		if len(childJob.ParentJobs) == 1 {
-			log.Infof("Deleting child %s", id)
+			Logger.Infof("Deleting child %s", id)
 			_ = cache.Delete(childJob.Id)
 			continue
 		}
@@ -472,7 +375,7 @@ func (j *Job) RunOnFailureJob(cache JobCache) {
 	if j.OnFailureJob != "" {
 		onFailureJob, cacheErr := cache.Get(j.OnFailureJob)
 		if cacheErr == ErrJobDoesntExist {
-			log.Errorf("Error retrieving dependent job with id of %s", j.OnFailureJob)
+			Logger.Errorf("Error retrieving dependent job with id of %s", j.OnFailureJob)
 		} else {
 			onFailureJob.Run(cache)
 		}
@@ -483,7 +386,7 @@ func (j *Job) Run(cache JobCache) {
 
 	_, err := cache.Get(j.Id)
 	if errors.Is(err, ErrJobDoesntExist) {
-		log.Infof("Job %s with id %s tried to run, but exited early because it has been deleted", j.Name, j.Id)
+		Logger.Infof("Job %s with id %s tried to run, but exited early because it has been deleted", j.Name, j.Id)
 		return
 	}
 
@@ -493,6 +396,13 @@ func (j *Job) Run(cache JobCache) {
 
 	newStat, newMeta, err := jobRunner.Run(cache)
 	if err != nil {
+		if err == ErrJobIsRunning { // return to prevent duplicate task execution.
+			return
+		}
+		if err == ErrBeyoundConcurrency { // reset StartWaiting when beyound concurrency jobs running
+			go j.StartWaiting(cache, true)
+			return
+		}
 		j.lock.RLock()
 		j.RunOnFailureJob(cache)
 		j.lock.RUnlock()
@@ -510,7 +420,7 @@ func (j *Job) Run(cache JobCache) {
 	j.lock.Unlock()
 	j.lock.RLock()
 	if err := cache.Set(j); err != nil {
-		log.Errorf("Job %s with id %s ran, but the results couldn't be persisted: %v", j.Name, j.Id, err)
+		Logger.Errorf("Job %s with id %s ran, but the results couldn't be persisted: %v", j.Name, j.Id, err)
 	}
 	j.lock.RUnlock()
 	j.lock.Lock()
@@ -563,16 +473,16 @@ func (j *Job) ShouldStartWaiting() bool {
 func (j *Job) validation() error {
 	var err error
 	switch {
-	case j.JobType == LocalJob && (j.Name == "" || j.Command == ""):
+	case j.JobType == types.LocalJob && (j.Name == "" || j.Command == ""):
 		err = ErrInvalidJob
-	case j.JobType == RemoteJob && (j.Name == "" || j.RemoteProperties.Url == ""):
+	case j.JobType == types.RemoteJob && (j.Name == "" || j.RemoteProperties.Url == ""):
 		err = ErrInvalidRemoteJob
-	case j.JobType != LocalJob && j.JobType != RemoteJob:
+	case j.JobType != types.LocalJob && j.JobType != types.RemoteJob:
 		err = ErrInvalidJobType
 	default:
 		return nil
 	}
-	log.Errorf(err.Error())
+	Logger.Errorf(err.Error())
 	return err
 }
 

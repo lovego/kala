@@ -14,7 +14,6 @@ import (
 	"github.com/lovego/kala/job"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +24,7 @@ func TestMain(m *testing.M) {
 	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
 	pool, err := dockertest.NewPool("")
 	if err != nil {
-		log.Fatalf("Could not connect to docker: %s", err)
+		job.Logger.Fatalf("Could not connect to docker: %s", err)
 	}
 
 	// pulls an image, creates a container based on it and runs it
@@ -44,13 +43,13 @@ func TestMain(m *testing.M) {
 		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
 	})
 	if err != nil {
-		log.Fatalf("Could not start resource: %s", err)
+		job.Logger.Fatalf("Could not start resource: %s", err)
 	}
 
 	hostAndPort := resource.GetHostPort("5432/tcp")
 	databaseUrl := fmt.Sprintf("postgres://user_name:secret@%s/dbname?sslmode=disable", hostAndPort)
 
-	log.Println("Connecting to database on url: ", databaseUrl)
+	job.Logger.Println("Connecting to database on url: ", databaseUrl)
 
 	resource.Expire(120) // Tell docker to hard kill the container in 120 seconds
 
@@ -67,7 +66,7 @@ func TestMain(m *testing.M) {
 
 		return db.Ping()
 	}); err != nil {
-		log.Fatalf("Could not connect to docker: %s", err)
+		job.Logger.Fatalf("Could not connect to docker: %s", err)
 	}
 
 	dbDocker = &DB{
@@ -79,7 +78,7 @@ func TestMain(m *testing.M) {
 
 	// You can't defer this because os.Exit doesn't care for defer
 	if err := pool.Purge(resource); err != nil {
-		log.Fatalf("Could not purge resource: %s", err)
+		job.Logger.Fatalf("Could not purge resource: %s", err)
 	}
 
 	os.Exit(code)

@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/lovego/kala/job"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -21,7 +20,7 @@ func New(address string) *ConsulJobDB {
 	}
 	client, err := api.NewClient(config)
 	if err != nil {
-		log.Fatal(err)
+		job.Logger.Fatal(err)
 	}
 	return &ConsulJobDB{
 		conn: client.KV(),

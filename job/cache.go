@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/cornelk/hashmap"
-	log "github.com/sirupsen/logrus"
+	"github.com/lovego/kala/types"
 )
 
 var (
@@ -62,7 +62,7 @@ func (c *MemoryJobCache) Start(persistWaitTime time.Duration) {
 	// Prep cache
 	allJobs, err := c.jobDB.GetAll()
 	if err != nil {
-		log.Fatal(err)
+		Logger.Fatal(err)
 	}
 	for _, j := range allJobs {
 		if j.ShouldStartWaiting() {
@@ -70,7 +70,7 @@ func (c *MemoryJobCache) Start(persistWaitTime time.Duration) {
 		}
 		err = c.Set(j)
 		if err != nil {
-			log.Errorln(err)
+			Logger.Error(err)
 		}
 	}
 
@@ -84,13 +84,13 @@ func (c *MemoryJobCache) Start(persistWaitTime time.Duration) {
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
 		s := <-ch
-		log.Infof("Process got signal: %s", s)
-		log.Infof("Shutting down....")
+		Logger.Infof("Process got signal: %s", s)
+		Logger.Infof("Shutting down....")
 
 		// Persist all jobs to database
 		err = c.Persist()
 		if err != nil {
-			log.Errorln(err)
+			Logger.Error(err)
 		}
 
 		// Close the database
@@ -157,13 +157,13 @@ func (c *MemoryJobCache) Delete(id string) error {
 	j.lock.Lock()
 
 	go func() {
-		log.Errorln(j.DeleteFromParentJobs(c)) // todo: review
+		Logger.Error(j.DeleteFromParentJobs(c)) // todo: review
 	}()
 
 	// Remove itself from dependent jobs as a parent job
 	// and possibly delete child jobs if they don't have any other parents.
 	go func() {
-		log.Errorln(j.DeleteFromDependentJobs(c)) // todo: review
+		Logger.Error(j.DeleteFromDependentJobs(c)) // todo: review
 	}()
 
 	delete(c.jobs.Jobs, id)
@@ -200,7 +200,7 @@ func (c *MemoryJobCache) PersistEvery(persistWaitTime time.Duration) {
 		<-wait
 		err = c.Persist()
 		if err != nil {
-			log.Errorf("Error occurred persisting the database. Err: %s", err)
+			Logger.Errorf("Error occurred persisting the database. Err: %s", err)
 		}
 	}
 }
@@ -229,20 +229,25 @@ func (c *LockFreeJobCache) Start(persistWaitTime time.Duration, jobstatTtl time.
 	// Prep cache
 	allJobs, err := c.jobDB.GetAll()
 	if err != nil {
-		log.Fatal(err)
+		Logger.Fatal(err)
+	}
+	// Clear all jobs running stat
+	err = clear(allJobs...)
+	if err != nil {
+		Logger.Fatal(err)
 	}
 	for _, j := range allJobs {
 		if j.Schedule == "" {
-			log.Infof("Job %s:%s skipped.", j.Name, j.Id)
+			Logger.Infof("Job %s:%s skipped.", j.Name, j.Id)
 			continue
 		}
 		if j.ShouldStartWaiting() {
 			j.StartWaiting(c, false)
 		}
-		// log.Infof("Job %s:%s added to cache.", j.Name, j.Id)
+		// Logger.Infof("Job %s:%s added to cache.", j.Name, j.Id)
 		err := c.Set(j)
 		if err != nil {
-			log.Errorln(err)
+			Logger.Error(err)
 		}
 	}
 	// Occasionally, save items in cache to db.
@@ -255,23 +260,6 @@ func (c *LockFreeJobCache) Start(persistWaitTime time.Duration, jobstatTtl time.
 		c.retentionPeriod = jobstatTtl
 		go c.RetainEvery(1 * time.Minute)
 	}
-
-	// Process-level defer for shutting down the db.
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	go func() {
-		s := <-ch
-		log.Infof("Process got signal: %s", s)
-		log.Infof("Shutting down....")
-
-		// Persist all jobs to database
-		log.Errorln(c.Persist())
-
-		// Close the database
-		c.jobDB.Close()
-
-		os.Exit(0)
-	}()
 }
 
 func (c *LockFreeJobCache) Get(id string) (*Job, error) {
@@ -330,14 +318,14 @@ func (c *LockFreeJobCache) Delete(id string) error {
 	j.lock.Lock()
 
 	go func() {
-		log.Errorln(j.DeleteFromParentJobs(c)) // todo: review
+		Logger.Error(j.DeleteFromParentJobs(c)) // todo: review
 	}()
 	// Remove itself from dependent jobs as a parent job
 	// and possibly delete child jobs if they don't have any other parents.
 	go func() {
-		log.Errorln(j.DeleteFromDependentJobs(c)) // todo: review
+		Logger.Error(j.DeleteFromDependentJobs(c)) // todo: review
 	}()
-	log.Infof("Deleting %s", id)
+	Logger.Infof("Deleting %s", id)
 	c.jobs.Del(id)
 	return err
 }
@@ -373,12 +361,12 @@ func (c *LockFreeJobCache) PersistEvery(persistWaitTime time.Duration) {
 		<-wait
 		err = c.Persist()
 		if err != nil {
-			log.Errorf("Error occurred persisting the database. Err: %s", err)
+			Logger.Errorf("Error occurred persisting the database. Err: %s", err)
 		}
 	}
 }
 
-func (c *LockFreeJobCache) locateJobStatsIndexForRetention(stats []*JobStat) (marker int) {
+func (c *LockFreeJobCache) locateJobStatsIndexForRetention(stats []*types.JobStat) (marker int) {
 	now := time.Now()
 	expiresAt := now.Add(-c.retentionPeriod)
 	pos := -1
@@ -404,8 +392,8 @@ func (c *LockFreeJobCache) compactJobStats(job *Job) {
 	defer job.lock.Unlock()
 	pos := c.locateJobStatsIndexForRetention(job.Stats)
 	if pos >= 0 {
-		log.Infof("JobStats TTL: removing %d items", pos+1)
-		tmp := make([]*JobStat, len(job.Stats)-pos-1)
+		Logger.Infof("JobStats TTL: removing %d items", pos+1)
+		tmp := make([]*types.JobStat, len(job.Stats)-pos-1)
 		copy(tmp, job.Stats[pos+1:])
 		job.Stats = tmp
 	}
@@ -418,7 +406,7 @@ func (c *LockFreeJobCache) RetainEvery(retentionWaitTime time.Duration) {
 		<-wait
 		err = c.Retain()
 		if err != nil {
-			log.Errorf("Error occurred during invoking retention. Err: %s", err)
+			Logger.Errorf("Error occurred during invoking retention. Err: %s", err)
 		}
 	}
 }

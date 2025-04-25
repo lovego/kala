@@ -7,17 +7,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/lovego/goa"
 	"github.com/lovego/kala/api"
 	"github.com/lovego/kala/job"
+	"github.com/lovego/kala/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func NewTestServer() *httptest.Server {
-	r := mux.NewRouter()
+	r := goa.New()
 	db := &job.MockDB{}
 	cache := job.NewLockFreeJobCache(db)
-	api.SetupApiRoutes(r, cache, "")
+	api.SetupApiRoutes(r.Group(types.ApiUrlPrefix), cache, "")
 	return httptest.NewServer(r)
 }
 
@@ -38,14 +39,14 @@ func cleanUp() {
 	}
 }
 
-func NewJobMap() *job.Job {
+func NewJobMap() *types.Job {
 	scheduleTime := time.Now().Add(time.Minute * 5)
 	repeat := 1
 	delay := "P1DT10M10S"
 	parsedTime := scheduleTime.Format(time.RFC3339)
 	scheduleStr := fmt.Sprintf("R%d/%s/%s", repeat, parsedTime, delay)
 
-	return &job.Job{
+	return &types.Job{
 		Schedule: scheduleStr,
 		Name:     "mock_job",
 		Command:  "bash -c 'date'",

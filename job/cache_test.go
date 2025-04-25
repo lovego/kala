@@ -1,6 +1,7 @@
 package job
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -23,6 +24,7 @@ func TestCacheRetainShouldRemoveOldJobStats(t *testing.T) {
 	j := GetMockRecurringJobWithSchedule(pastDate, "PT1S")
 	j.Stats = GetMockJobStats(pastDate, 5)
 	j.Id = "0"
+	j.GroupName = fmt.Sprintf("%d", time.Now().UnixNano())
 
 	jobs := make([]*Job, 0)
 	jobs = append(jobs, j)
@@ -50,6 +52,7 @@ func TestCacheStartStartsARecurringJobWithStartDateInThePast(t *testing.T) {
 	pastDate := time.Date(2016, time.April, 12, 20, 0, 0, 0, time.UTC)
 	j := GetMockRecurringJobWithSchedule(pastDate, "PT1S")
 	j.Id = "0"
+	j.GroupName = fmt.Sprintf("%d", time.Now().UnixNano())
 
 	jobs := make([]*Job, 0)
 	jobs = append(jobs, j)
@@ -72,6 +75,7 @@ func TestCacheStartCanResumeJobAtNextScheduledPoint(t *testing.T) {
 	pastDate := time.Now().Add(-1 * time.Second)
 	j := GetMockRecurringJobWithSchedule(pastDate, "PT3S")
 	j.Id = "0"
+	j.GroupName = fmt.Sprintf("%d", time.Now().UnixNano())
 	j.ResumeAtNextScheduledTime = true
 	j.InitDelayDuration(false)
 

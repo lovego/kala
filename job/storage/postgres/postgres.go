@@ -8,7 +8,6 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/lovego/bsql"
 	"github.com/lovego/kala/job"
-	log "github.com/sirupsen/logrus"
 )
 
 const TABLE_NAME = "jobs"
@@ -19,15 +18,12 @@ var (
 		Desc:   "任务管理",
 		Struct: &job.Job{},
 		Constraints: []string{
-			"UNIQUE(id)", "UNIQUE(name)",
-		},
-		ExtraSqls: []string{
-			`CREATE INDEX IF NOT EXISTS jobs_owner_index ON jobs (owner)`,
+			"UNIQUE(id)", "UNIQUE(owner, name)",
 		},
 	}.Sql()
 	insertFields     = bsql.FieldsFromStruct(job.Job{}, nil)
 	insertColumns    = bsql.Fields2ColumnsStr(insertFields)
-	conflictFields   = bsql.FieldsFromStruct(job.Job{}, []string{"id"})
+	conflictFields   = bsql.FieldsFromStruct(job.Job{}, []string{"id", "name", "Owner", "JobType"})
 	conflictColumns  = bsql.Fields2ColumnsStr(conflictFields)
 	conflictExcluded = bsql.FieldsToColumnsStr(conflictFields, "excluded.", nil)
 )
@@ -40,7 +36,7 @@ type DB struct {
 func New(dsn string) *DB {
 	connection, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal(err)
+		job.Logger.Fatal(err)
 	}
 	// passive attempt to create table
 	connection.Exec(tableSql)
@@ -51,7 +47,7 @@ func New(dsn string) *DB {
 
 // GetAll returns all persisted Jobs.
 func (d DB) GetAll() ([]*job.Job, error) {
-	query := fmt.Sprintf(`select coalesce(json_agg(j), '[]'::json) from (select row_to_json(j) from %[1]s AS j) as j;`, TABLE_NAME)
+	query := fmt.Sprintf(`select coalesce(json_agg(row_to_json(j)), '[]'::json) from %[1]s AS j`, TABLE_NAME)
 
 	var r sql.NullString
 	err := d.conn.QueryRow(query).Scan(&r)
@@ -67,7 +63,7 @@ func (d DB) GetAll() ([]*job.Job, error) {
 	jobsInitiated := []*job.Job{}
 	for _, j := range jobs {
 		if err = j.InitDelayDuration(false); err != nil {
-			break
+			return nil, err
 		}
 		jobsInitiated = append(jobsInitiated, j)
 	}

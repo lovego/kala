@@ -2,7 +2,6 @@ package mongo
 
 import (
 	"github.com/lovego/kala/job"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -23,19 +22,19 @@ type DB struct {
 func New(addrs string, cred *mgo.Credential) *DB {
 	session, err := mgo.Dial(addrs)
 	if err != nil {
-		log.Fatal(err)
+		job.Logger.Fatal(err)
 	}
 	if cred.Username != "" {
 		err = session.Login(cred)
 		if err != nil {
-			log.Fatal(err)
+			job.Logger.Fatal(err)
 		}
 	}
 	db := session.DB(database)
 	c := db.C(collection)
 	session.SetMode(mgo.Monotonic, true)
 	if err := c.EnsureIndexKey("id"); err != nil {
-		log.Fatal(err)
+		job.Logger.Fatal(err)
 	}
 	return &DB{
 		collection: c,

@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/lovego/kala/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,9 +16,11 @@ func TestTemplatize(t *testing.T) {
 
 		t.Run("raw", func(t *testing.T) {
 			j := &Job{
-				Name:    "mock_job",
-				Command: "echo mr.{{$.Owner}}",
-				Owner:   "jedi@master.com",
+				Job: &types.Job{
+					Name:    "mock_job",
+					Command: "echo mr.{{$.Owner}}",
+					Owner:   "jedi@master.com",
+				},
 			}
 			r := JobRunner{
 				job: j,
@@ -29,10 +32,12 @@ func TestTemplatize(t *testing.T) {
 
 		t.Run("templated", func(t *testing.T) {
 			j := &Job{
-				Name:               "mock_job",
-				Command:            "echo mr.{{$.Owner}}",
-				Owner:              "jedi@master.com",
-				TemplateDelimiters: "{{ }}",
+				Job: &types.Job{
+					Name:               "mock_job",
+					Command:            "echo mr.{{$.Owner}}",
+					Owner:              "jedi@master.com",
+					TemplateDelimiters: "{{ }}",
+				},
 			}
 			r := JobRunner{
 				job: j,
@@ -58,10 +63,12 @@ func TestTemplatize(t *testing.T) {
 
 		t.Run("raw", func(t *testing.T) {
 			j := &Job{
-				Name:  "mock_job",
-				Owner: "jedi@master.com",
-				RemoteProperties: RemoteProperties{
-					Url: "http://" + srv.Listener.Addr().String() + "/path?val=a_{{$.Name}}",
+				Job: &types.Job{
+					Name:  "mock_job",
+					Owner: "jedi@master.com",
+					RemoteProperties: types.RemoteProperties{
+						Url: "http://" + srv.Listener.Addr().String() + "/path?val=a_{{$.Name}}",
+					},
 				},
 			}
 			r := JobRunner{
@@ -74,12 +81,14 @@ func TestTemplatize(t *testing.T) {
 
 		t.Run("templated", func(t *testing.T) {
 			j := &Job{
-				Name:  "mock_job",
-				Owner: "jedi@master.com",
-				RemoteProperties: RemoteProperties{
-					Url: "http://" + srv.Listener.Addr().String() + "/path?val=a_{{$.Name}}",
+				Job: &types.Job{
+					Name:  "mock_job",
+					Owner: "jedi@master.com",
+					RemoteProperties: types.RemoteProperties{
+						Url: "http://" + srv.Listener.Addr().String() + "/path?val=a_{{$.Name}}",
+					},
+					TemplateDelimiters: "{{ }}",
 				},
-				TemplateDelimiters: "{{ }}",
 			}
 			r := JobRunner{
 				job: j,
@@ -101,11 +110,13 @@ func TestTemplatize(t *testing.T) {
 
 		t.Run("raw", func(t *testing.T) {
 			j := &Job{
-				Name:  "mock_job",
-				Owner: "jedi@master.com",
-				RemoteProperties: RemoteProperties{
-					Url:  "http://" + srv.Listener.Addr().String() + "/path",
-					Body: `{"hello": "world", "foo": "young-${$.Owner}"}`,
+				Job: &types.Job{
+					Name:  "mock_job",
+					Owner: "jedi@master.com",
+					RemoteProperties: types.RemoteProperties{
+						Url:  "http://" + srv.Listener.Addr().String() + "/path",
+						Body: `{"hello": "world", "foo": "young-${$.Owner}"}`,
+					},
 				},
 			}
 			r := JobRunner{
@@ -118,13 +129,15 @@ func TestTemplatize(t *testing.T) {
 
 		t.Run("templated", func(t *testing.T) {
 			j := &Job{
-				Name:  "mock_job",
-				Owner: "jedi@master.com",
-				RemoteProperties: RemoteProperties{
-					Url:  "http://" + srv.Listener.Addr().String() + "/path",
-					Body: `{"hello": "world", "foo": "young-${$.Owner}"}`,
+				Job: &types.Job{
+					Name:  "mock_job",
+					Owner: "jedi@master.com",
+					RemoteProperties: types.RemoteProperties{
+						Url:  "http://" + srv.Listener.Addr().String() + "/path",
+						Body: `{"hello": "world", "foo": "young-${$.Owner}"}`,
+					},
+					TemplateDelimiters: "${ }",
 				},
-				TemplateDelimiters: "${ }",
 			}
 			r := JobRunner{
 				job: j,
