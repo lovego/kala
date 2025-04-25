@@ -16,7 +16,7 @@ type webuiData struct {
 }
 
 var (
-	lock         = sync.RWMutex
+	lock         = new(sync.RWMutex)
 	webuiDataMap = make(map[string]webuiData)
 )
 
