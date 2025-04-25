@@ -1,11 +1,11 @@
 # Reference Kala(https://github.com/ajvb/kala)
 
-[![GoDoc](https://godoc.org/github.com/ajvb/kala?status.svg)](https://godoc.org/github.com/ajvb/kala)
-![golangci-lint](https://github.com/ajvb/kala/workflows/golangci-lint/badge.svg)
-[![Circle CI](https://circleci.com/gh/ajvb/kala.svg?style=svg)](https://circleci.com/gh/ajvb/kala)
-[![Coverage Status](https://coveralls.io/repos/ajvb/kala/badge.svg?branch=master&service=github)](https://coveralls.io/github/ajvb/kala?branch=master)
+[![Build Status](https://github.com/lovego/kala/actions/workflows/go.yml/badge.svg)](https://github.com/lovego/kala/actions/workflows/go.yml)
+[![Coverage Status](https://coveralls.io/repos/github/lovego/kala/badge.svg?branch=master&1)](https://coveralls.io/github/lovego/kala)
+[![Go Report Card](https://goreportcard.com/badge/github.com/lovego/kala)](https://goreportcard.com/report/github.com/lovego/kala)
+[![Documentation](https://pkg.go.dev/badge/github.com/lovego/kala)](https://pkg.go.dev/github.com/lovego/kala@v0.3.4)
 
-![Dashboard](assets/job-list.png)
+**Supports job to be executed only once on multiple nodes.**
 
 Kala is a simplistic, modern, and performant job scheduler written in Go.  Features:
 
