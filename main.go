@@ -50,7 +50,7 @@ func main() {
 
 	api.SetupApiRoutes(router.Group(types.ApiUrlPrefix), cache, "default")
 	router.Use(func(c *goa.Context) {
-		http.StripPrefix("/webui/", http.FileServer(api.AssetFS())).ServeHTTP(c.ResponseWriter, c.Request)
+		http.StripPrefix("/webui/", http.FileServer(api.AssetFS(""))).ServeHTTP(c.ResponseWriter, c.Request)
 	})
 
 	// Launch API server
