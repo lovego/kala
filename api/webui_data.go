@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 type webuiData struct {
@@ -15,6 +16,7 @@ type webuiData struct {
 }
 
 var (
+	lock         = sync.RWMutex
 	webuiDataMap = make(map[string]webuiData)
 )
 
@@ -40,10 +42,12 @@ func initWebuiData(webuiPath, name string) error {
 	if err != nil {
 		return err
 	}
+	lock.Lock()
 	webuiDataMap[name] = webuiData{
 		body:     data,
 		fileInfo: fileInfo,
 	}
+	lock.Unlock()
 	return nil
 }
 

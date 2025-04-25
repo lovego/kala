@@ -42,7 +42,9 @@ import (
 )
 
 func bindataRead(name string) (*webuiData, error) {
+	lock.RLock()
 	data, ok := webuiDataMap[name]
+	lock.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("Read %q", name)
 	}
