@@ -99,7 +99,7 @@ func (j *JobRunner) Run(cache JobCache) (*types.JobStat, types.Metadata, error) 
 			break
 		}
 	}
-
+	j.currentStat.Response = out
 	Logger.Debugf("Job %s:%s output: %s", j.job.Name, j.job.Id, out)
 	j.meta.SuccessCount++
 	j.meta.NumberOfFinishedRuns++

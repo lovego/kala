@@ -12,6 +12,7 @@ type JobStat struct {
 	Duration          string     `json:"duration,omitempty"`
 	FinishAt          *time.Time `json:"finish_at,omitempty"`
 	Error             string     `json:"error,omitempty"`
+	Response          string     `json:"response,omitempty"`
 }
 
 // KalaStats is the struct for storing app-level metrics
