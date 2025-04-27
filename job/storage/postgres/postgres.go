@@ -14,12 +14,11 @@ const TABLE_NAME = "jobs"
 
 var (
 	tableSql = bsql.Table{
-		Name:   TABLE_NAME,
-		Desc:   "任务管理",
-		Struct: &job.Job{},
-		Constraints: []string{
-			"UNIQUE(id)", "UNIQUE(owner, name)",
-		},
+		Name:        TABLE_NAME,
+		Desc:        "任务管理",
+		Struct:      &job.Job{},
+		Constraints: []string{"UNIQUE(id)"},
+		ExtraSqls:   []string{"CREATE INDEX IF NOT EXISTS jobs_owner_name_idx ON jobs(owner,name);"},
 	}.Sql()
 	insertFields     = bsql.FieldsFromStruct(job.Job{}, nil)
 	insertColumns    = bsql.Fields2ColumnsStr(insertFields)
