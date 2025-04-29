@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/lovego/bsql"
+	"github.com/lovego/bsql/scan"
 	"github.com/lovego/kala/job"
 )
 
@@ -20,8 +21,8 @@ var (
 		Constraints: []string{"UNIQUE(id)"},
 		ExtraSqls:   []string{"CREATE INDEX IF NOT EXISTS jobs_owner_name_idx ON jobs(owner,name);"},
 	}.Sql()
-	insertFields     = bsql.FieldsFromStruct(job.Job{}, nil)
-	insertColumns    = bsql.Fields2ColumnsStr(insertFields)
+	allFields        = bsql.FieldsFromStruct(job.Job{}, nil)
+	allColumns       = bsql.Fields2ColumnsStr(allFields)
 	conflictFields   = bsql.FieldsFromStruct(job.Job{}, []string{"id", "name", "Owner", "JobType"})
 	conflictColumns  = bsql.Fields2ColumnsStr(conflictFields)
 	conflictExcluded = bsql.FieldsToColumnsStr(conflictFields, "excluded.", nil)
@@ -46,21 +47,23 @@ func New(dsn string) *DB {
 
 // GetAll returns all persisted Jobs.
 func (d DB) GetAll() ([]*job.Job, error) {
-	query := fmt.Sprintf(`select coalesce(json_agg(row_to_json(j)), '[]'::json) from %[1]s AS j`, TABLE_NAME)
+	query := fmt.Sprintf(`select %s from %s AS j`, allColumns, TABLE_NAME)
 
-	var r sql.NullString
-	err := d.conn.QueryRow(query).Scan(&r)
+	jobs := []job.Job{}
+	rows, err := d.conn.Query(query)
+	if rows != nil {
+		defer rows.Close()
+	}
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
-	err = nil
-	jobs := []*job.Job{}
-	if r.Valid {
-		err = json.Unmarshal([]byte(r.String), &jobs)
+	if err := scan.Scan(rows, &jobs); err != nil {
+		return nil, err
 	}
 
 	jobsInitiated := []*job.Job{}
-	for _, j := range jobs {
+	for i := range jobs {
+		j := &jobs[i]
 		if err = j.InitDelayDuration(false); err != nil {
 			return nil, err
 		}
@@ -97,8 +100,8 @@ func (d DB) Delete(id string) error {
 func (d DB) Save(j *job.Job) error {
 	query := fmt.Sprintf(
 		`INSERT INTO %s (%s) VALUES %s ON CONFLICT (id) DO UPDATE SET (%s) = (%s)`,
-		TABLE_NAME, insertColumns,
-		bsql.StructValues(j, insertFields),
+		TABLE_NAME, allColumns,
+		bsql.StructValues(j, allFields),
 		conflictColumns, conflictExcluded,
 	)
 	_, err := d.conn.Exec(query)

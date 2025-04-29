@@ -413,6 +413,14 @@ func (j *Job) Run(cache JobCache) {
 	if newStat != nil {
 		j.Stats = append(j.Stats, newStat)
 	}
+	if j.ShouldStartWaiting() {
+		go j.StartWaiting(cache, true)
+	} else {
+		j.IsDone = true // save to db
+		if j.ranChan != nil {
+			j.ranChan <- struct{}{}
+		}
+	}
 
 	// Kinda annoying and inefficient that it needs to be done this way.
 	// Some refactoring is probably in order.
@@ -423,19 +431,6 @@ func (j *Job) Run(cache JobCache) {
 		Logger.Errorf("Job %s with id %s ran, but the results couldn't be persisted: %v", j.Name, j.Id, err)
 	}
 	j.lock.RUnlock()
-	j.lock.Lock()
-
-	if j.ShouldStartWaiting() {
-		go j.StartWaiting(cache, true)
-	} else {
-		j.IsDone = true
-
-		if j.ranChan != nil {
-			j.ranChan <- struct{}{}
-		}
-	}
-
-	j.lock.Unlock()
 }
 
 func (j *Job) StopTimer() {
