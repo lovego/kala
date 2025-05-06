@@ -23,13 +23,13 @@ var (
 )
 
 type Duration struct {
-	Years   int
-	Months  int
-	Weeks   int
-	Days    int
-	Hours   int
-	Minutes int
-	Seconds int
+	Years   int `json:"years"`
+	Months  int `json:"months"`
+	Weeks   int `json:"weeks"`
+	Days    int `json:"days"`
+	Hours   int `json:"hours"`
+	Minutes int `json:"minutes"`
+	Seconds int `json:"seconds"`
 }
 
 func FromString(dur string) (*Duration, error) {

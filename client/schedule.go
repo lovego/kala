@@ -10,9 +10,9 @@ import (
 )
 
 type Schedule struct {
-	After    time.Duration    `comment:"Start datetime after now seconds"`
-	Interval iso8601.Duration `comment:"Interval Between Runs"`
-	Repeat   uint             `comment:"Number of times to repeat"`
+	After    time.Duration    `json:"after" comment:"Start datetime after now seconds"`
+	Interval iso8601.Duration `json:"interval" comment:"Interval Between Runs"`
+	Repeat   uint             `json:"repeat" comment:"Number of times to repeat"`
 }
 
 // Make Schedule for create job.
@@ -28,12 +28,12 @@ func (s Schedule) String() string {
 }
 
 type Scheduler struct {
-	Name      string                 `comment:"job name"`
-	Owner     string                 `comment:"job owner"`
-	GroupName string                 `comment:"job group name"`
-	Content   string                 `comment:"job content"`
-	Remote    types.RemoteProperties `comment:"job remote properties"`
-	Retries   uint                   `comment:"job retry times when failed"`
+	Name      string                 `json:"name" comment:"job name"`
+	Owner     string                 `json:"owner" comment:"job owner"`
+	GroupName string                 `json:"group_name" comment:"job group name"`
+	Content   string                 `json:"content" comment:"job content"`
+	Remote    types.RemoteProperties `json:"remote" comment:"job remote properties"`
+	Retries   uint                   `json:"retries" comment:"job retry times when failed"`
 	Schedule
 }
 
