@@ -10,15 +10,15 @@ import (
 )
 
 type Schedule struct {
-	After    time.Duration
-	Interval iso8601.Duration
-	Repeat   uint
+	After    time.Duration    `comment:"Start datetime after now seconds"`
+	Interval iso8601.Duration `comment:"Interval Between Runs"`
+	Repeat   uint             `comment:"Number of times to repeat"`
 }
 
 // Make Schedule for create job.
 // Number of times to repeat/Start Datetime/Interval Between Runs
 func (s Schedule) String() string {
-	schedule := fmt.Sprintf("R%d/%s", s.Repeat, time.Now().Add(s.After).Format(time.RFC3339))
+	schedule := fmt.Sprintf("R%d/%s", s.Repeat, time.Now().Add(s.After*time.Second).Format(time.RFC3339))
 	if !s.Interval.IsZero() {
 		schedule += "/" + s.Interval.String()
 	} else {
@@ -28,12 +28,12 @@ func (s Schedule) String() string {
 }
 
 type Scheduler struct {
-	Name      string                 // job name
-	Owner     string                 // job owner
-	GroupName string                 // job group name
-	Content   string                 // job content
-	Remote    types.RemoteProperties // job remote properties
-	Retries   uint                   // job retry times when failed
+	Name      string                 `comment:"job name"`
+	Owner     string                 `comment:"job owner"`
+	GroupName string                 `comment:"job group name"`
+	Content   string                 `comment:"job content"`
+	Remote    types.RemoteProperties `comment:"job remote properties"`
+	Retries   uint                   `comment:"job retry times when failed"`
 	Schedule
 }
 

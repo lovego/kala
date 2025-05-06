@@ -83,20 +83,20 @@ type Job struct {
 
 // RemoteProperties Custom properties for the remote job type
 type RemoteProperties struct {
-	Url    string `json:"url"`
-	Method string `json:"method"`
+	Url    string `json:"url" comment:"remote job http url"`
+	Method string `json:"method" comment:"remote job http method"`
 
 	// A body to attach to the http request
-	Body string `json:"body"`
+	Body string `json:"body" comment:"remote job http request body"`
 
 	// A list of headers to add to http request (e.g. [{"key": "charset", "value": "UTF-8"}])
-	Headers http.Header `json:"headers"`
+	Headers http.Header `json:"headers" comment:"remote job http request headers"`
 
 	// A timeout property for the http request in seconds
-	Timeout int `json:"timeout"`
+	Timeout int `json:"timeout" comment:"remote job http request timeout"`
 
 	// A list of expected response codes (e.g. [200, 201])
-	ExpectedResponseCodes []int `json:"expected_response_codes"`
+	ExpectedResponseCodes []int `json:"expected_response_codes" comment:"list of http response codes, default 200"`
 }
 
 type Metadata struct {
