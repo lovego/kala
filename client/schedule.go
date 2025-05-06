@@ -51,8 +51,5 @@ func (s Scheduler) Job() *types.Job {
 	if job.RemoteProperties.Headers == nil {
 		job.RemoteProperties.Headers = make(http.Header)
 	}
-	if job.Retries == 0 {
-		job.Retries = 1 // default retry 1 times
-	}
 	return job
 }
