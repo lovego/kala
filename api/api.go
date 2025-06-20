@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/lovego/goa"
 	"github.com/lovego/kala/job"
@@ -57,13 +58,17 @@ func HandleListJobsRequest(cache job.JobCache) func(c *goa.Context) {
 		for k := range allJobs.Jobs {
 			resp.Jobs[k] = allJobs.Jobs[k].Job
 		}
+		if err := job.JobsRunning(resp.Jobs); err != nil {
+			c.StatusJson(http.StatusBadRequest, apiError{Error: err.Error()})
+			return
+		}
 		c.StatusJson(http.StatusOK, resp)
 	}
 }
 
-// HandleAddJob takes a job object and unmarshals it to a Job type,
+// HandleAddOrUpdateJob takes a job object and unmarshals it to a Job type,
 // and then throws the job in the schedulers.
-func HandleAddJob(cache job.JobCache, defaultOwner string) func(*goa.Context) {
+func HandleAddOrUpdateJob(cache job.JobCache, defaultOwner string) func(*goa.Context) {
 	return func(c *goa.Context) {
 		body, err := c.RequestBody()
 		if err != nil {
@@ -75,15 +80,33 @@ func HandleAddJob(cache job.JobCache, defaultOwner string) func(*goa.Context) {
 			c.StatusJson(http.StatusBadRequest, apiError{Error: err.Error()})
 			return
 		}
-		if defaultOwner != "" && newJob.Owner == "" {
-			newJob.Owner = defaultOwner
+		if newJob.Id != "" { // update job
+			j, err := cache.Get(newJob.Id)
+			if err != nil || j == nil {
+				c.WriteHeader(http.StatusNotFound)
+				return
+			}
+			err = cache.Set(j)
+			if err != nil {
+				c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
+			}
+			c.StatusJson(http.StatusCreated, &types.AddJobResponse{Id: newJob.Id})
+		} else { // create job
+			if defaultOwner != "" && newJob.Owner == "" {
+				newJob.Owner = defaultOwner
+			}
+			if newJob.CreatedAt.IsZero() {
+				newJob.CreatedAt = time.Now().Round(time.Second)
+			} else {
+				newJob.CreatedAt = newJob.CreatedAt.Round(time.Second)
+			}
+			err = newJob.Init(cache)
+			if err != nil {
+				c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
+				return
+			}
+			c.StatusJson(http.StatusCreated, &types.AddJobResponse{Id: newJob.Id})
 		}
-		err = newJob.Init(cache)
-		if err != nil {
-			c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
-			return
-		}
-		c.StatusJson(http.StatusCreated, &types.AddJobResponse{Id: newJob.Id})
 	}
 }
 
@@ -111,7 +134,7 @@ func HandleJobDeleteRequest(cache job.JobCache) func(c *goa.Context) {
 		id := c.Param(0)
 
 		j, err := cache.Get(id)
-		if err != nil {
+		if err != nil && err != job.ErrJobDoesntExist {
 			c.StatusJson(http.StatusBadRequest, apiError{Error: err.Error()})
 			return
 		}
@@ -119,7 +142,8 @@ func HandleJobDeleteRequest(cache job.JobCache) func(c *goa.Context) {
 			c.WriteHeader(http.StatusNoContent)
 			return
 		}
-		if err := j.Delete(cache); err != nil {
+		logical := len(j.Stats) > 0 && c.FormValue("force") != "true"
+		if err := j.Delete(cache, logical); err != nil {
 			c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
 		} else {
 			c.WriteHeader(http.StatusNoContent)
@@ -197,7 +221,7 @@ func HandleEnableJobRequest(cache job.JobCache) func(c *goa.Context) {
 // SetupApiRoutes is used within main to initialize all of the routes
 func SetupApiRoutes(router *goa.RouterGroup, cache job.JobCache, defaultOwner string) {
 	// Route for creating a job
-	router.Post(types.JobPath, HandleAddJob(cache, defaultOwner))
+	router.Post(types.JobPath, HandleAddOrUpdateJob(cache, defaultOwner))
 	// Route for deleting all jobs
 	router.Delete(types.JobPath+"/all", HandleDeleteAllJobs(cache))
 	// Route for deleting a job

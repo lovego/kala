@@ -1,6 +1,8 @@
 package types
 
-import "time"
+import (
+	"time"
+)
 
 // JobStat is used to store metrics about a specific Job .Run()
 type JobStat struct {

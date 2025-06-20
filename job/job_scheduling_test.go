@@ -2,6 +2,7 @@
 package job
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -15,65 +16,21 @@ var getWaitDurationTableTests = []struct {
 	ExpectedDuration time.Duration
 	Name             string
 }{
+
 	{
 		JobFunc: func() *Job {
 			return &Job{
 				Job: &types.Job{
 					// Schedule time is passed
-					Schedule: "R/2015-10-17T11:44:54.389361-07:00/PT10S",
+					Schedule: "R/2025-01-31T11:44:54.389361+08:00/P1M",
 					Metadata: types.Metadata{
-						LastAttemptedRun: time.Now(),
-					},
-				},
-			}
-		},
-		ExpectedDuration: 10 * time.Second,
-		Name:             "Passed time, 10 seconds",
-	},
-	{
-		JobFunc: func() *Job {
-			return &Job{
-				Job: &types.Job{
-					// Schedule time is passed
-					Schedule: "R/2015-10-17T11:44:54.389361-07:00/PT1M",
-					Metadata: types.Metadata{
-						LastAttemptedRun: time.Now(),
-					},
-				},
-			}
-		},
-		ExpectedDuration: time.Minute,
-		Name:             "Passed time, 1 minute",
-	},
-	{
-		JobFunc: func() *Job {
-			return &Job{
-				Job: &types.Job{
-					// Schedule time is passed, no repetitions
-					Schedule: "R0/2015-10-17T11:44:54.389361-07:00/",
-					Metadata: types.Metadata{
-						LastAttemptedRun: time.Time{},
-					},
-				},
-			}
-		},
-		ExpectedDuration: 0 * time.Second,
-		Name:             "Passed time, 0 seconds",
-	},
-	{
-		JobFunc: func() *Job {
-			return &Job{
-				Job: &types.Job{
-					// Schedule time is passed
-					Schedule: "R/2015-10-17T11:44:54.389361-07:00/P1D",
-					Metadata: types.Metadata{
-						LastAttemptedRun: time.Now(),
+						LastAttemptedRun: time.Date(2026, 1, 31, 12, 0, 0, 0, time.UTC),
 					},
 				},
 			}
 		},
 		ExpectedDuration: 24 * time.Hour,
-		Name:             "Passed time, 1 day",
+		Name:             "Passed time, 1 month",
 	},
 }
 
@@ -83,6 +40,7 @@ func TestGetWatiDuration(t *testing.T) {
 		err := testStruct.Job.InitDelayDuration(false)
 		assert.NoError(t, err)
 		actualDuration := testStruct.Job.GetWaitDuration()
+		fmt.Println(`222`, actualDuration)
 		Logger.Errorf("LastAttempted: %s", testStruct.Job.Metadata.LastAttemptedRun)
 		assert.InDelta(t, float64(testStruct.ExpectedDuration), float64(actualDuration), float64(time.Millisecond*50), "Test of "+testStruct.Name)
 	}

@@ -23,7 +23,7 @@ type JobCache interface {
 	Get(id string) (*Job, error)
 	GetAll() *JobsMap
 	Set(j *Job) error
-	Delete(id string) error
+	Delete(id string, logical bool) error
 	Persist() error
 	Enable(j *Job) error
 	Disable(j *Job) error
@@ -135,7 +135,7 @@ func (c *MemoryJobCache) Set(j *Job) error {
 	return nil
 }
 
-func (c *MemoryJobCache) Delete(id string) error {
+func (c *MemoryJobCache) Delete(id string, logical bool) error {
 	c.jobs.Lock.Lock()
 	defer c.jobs.Lock.Unlock()
 
@@ -159,13 +159,17 @@ func (c *MemoryJobCache) Delete(id string) error {
 	j.lock.Lock()
 
 	go func() {
-		Logger.Error(j.DeleteFromParentJobs(c)) // todo: review
+		if err := j.DeleteFromParentJobs(c); err != nil {
+			Logger.Error(err)
+		}
 	}()
 
 	// Remove itself from dependent jobs as a parent job
 	// and possibly delete child jobs if they don't have any other parents.
 	go func() {
-		Logger.Error(j.DeleteFromDependentJobs(c)) // todo: review
+		if err := j.DeleteFromDependentJobs(c); err != nil {
+			Logger.Error(err)
+		}
 	}()
 
 	delete(c.jobs.Jobs, id)
@@ -300,15 +304,30 @@ func (c *LockFreeJobCache) Set(j *Job) error {
 	return nil
 }
 
-func (c *LockFreeJobCache) Delete(id string) error {
+func (c *LockFreeJobCache) Delete(id string, logical bool) error {
 	j, err := c.Get(id)
 	if err != nil {
 		return ErrJobDoesntExist
 	}
+	if logical && j.Deleted {
+		return nil
+	}
+	running, err := j.isRunning()
+	if err != nil {
+		return err
+	}
+	if running {
+		return errors.New("running job can not delete")
+	}
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
-	err = c.jobDB.Delete(id)
+	if logical {
+		j.Deleted = true
+		err = c.Set(j)
+	} else {
+		err = c.jobDB.Delete(id)
+	}
 	if err != nil {
 		err = fmt.Errorf("Error occurred while trying to delete job from db: %s", err)
 		if c.PersistOnWrite {
@@ -329,7 +348,9 @@ func (c *LockFreeJobCache) Delete(id string) error {
 		Logger.Error(j.DeleteFromDependentJobs(c)) // todo: review
 	}()
 	Logger.Infof("Deleting %s", id)
-	c.jobs.Del(id)
+	if !logical {
+		c.jobs.Del(id)
+	}
 	return err
 }
 

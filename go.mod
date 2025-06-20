@@ -23,10 +23,11 @@ require (
 	github.com/lestrrat-go/test-mysqld v0.0.0-20190527004737-6c91be710371
 	github.com/lib/pq v1.10.4
 	github.com/lovego/bsql v0.1.6
-	github.com/lovego/errs v0.0.7
+	github.com/lovego/errs v0.0.7 // indirect
 	github.com/lovego/fs v0.0.4 // indirect
 	github.com/lovego/goa v0.4.0
 	github.com/lovego/logger v0.0.3
+	github.com/lovego/time2 v0.0.6
 	github.com/lovego/tracer v0.0.2 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-shellwords v1.0.0

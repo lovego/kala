@@ -869,7 +869,7 @@ func TestDependentJobsChildGetsDeleted(t *testing.T) {
 	assert.Equal(t, mockJob.DependentJobs[0], mockChildJob.Id)
 	assert.True(t, len(mockJob.DependentJobs) == 1)
 
-	cache.Delete(mockChildJob.Id)
+	cache.Delete(mockChildJob.Id, false)
 	time.Sleep(time.Second)
 
 	// Check to make sure its deleted
@@ -961,7 +961,7 @@ func TestDependentJobsParentJobGetsDeleted(t *testing.T) {
 	assert.Equal(t, mockJobBackup.DependentJobs[0], mockChildJobWithBackup.Id)
 	assert.True(t, len(mockJobBackup.DependentJobs) == 1)
 
-	cache.Delete(mockJob.Id)
+	cache.Delete(mockJob.Id, false)
 	time.Sleep(time.Second)
 
 	// Make sure it is deleted
@@ -1002,7 +1002,7 @@ func TestDeletedJobsStillRunning(t *testing.T) {
 	mockJobNTBD.Id = "1"
 	mockJobNTBD.Init(cache)
 
-	cache.Delete(mockJobTBD.Id)
+	cache.Delete(mockJobTBD.Id, false)
 	time.Sleep(2 * time.Second)
 
 	// Make sure it is deleted
@@ -1041,7 +1041,7 @@ func TestDeletedFromApiJobsStillRunning(t *testing.T) {
 	mockJobNTBD.Init(cache)
 
 	findedJobTBD, _ := cache.Get(mockJobTBD.Id)
-	findedJobTBD.Delete(cache)
+	findedJobTBD.Delete(cache, false)
 	time.Sleep(2 * time.Second)
 
 	// Make sure it is deleted

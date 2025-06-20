@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os/exec"
 	"strings"
 	"text/template"
@@ -141,10 +142,18 @@ func (j *JobRunner) RemoteRun() (string, error) {
 
 	// Get the actual url and body we're going to be using,
 	// including any necessary templating.
-	url, err := j.tryTemplatize(j.job.RemoteProperties.Url)
+	uri, err := j.tryTemplatize(j.job.RemoteProperties.Url)
 	if err != nil {
 		return "", fmt.Errorf("Error templatizing url: %v", err)
 	}
+	u, err := url.Parse(uri)
+	if err != nil {
+		return "", fmt.Errorf("Error parse url: %v", err)
+	}
+	values := u.Query()
+	values.Set("jobId", j.job.Id)
+	u.RawQuery = values.Encode()
+	uri = u.String()
 	body, err := j.tryTemplatize(j.job.RemoteProperties.Body)
 	if err != nil {
 		return "", fmt.Errorf("Error templatizing body: %v", err)
@@ -153,7 +162,7 @@ func (j *JobRunner) RemoteRun() (string, error) {
 	// Normalize the method passed by the user
 	method := strings.ToUpper(j.job.RemoteProperties.Method)
 	bodyBuffer := bytes.NewBufferString(body)
-	req, err := http.NewRequest(method, url, bodyBuffer)
+	req, err := http.NewRequest(method, uri, bodyBuffer)
 	if err != nil {
 		return "", err
 	}

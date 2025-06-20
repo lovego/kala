@@ -12,7 +12,7 @@ func TestDelete(t *testing.T) {
 	job := GetMockJobWithGenericSchedule(time.Now())
 	job.Init(cache)
 
-	err := job.Delete(cache)
+	err := job.Delete(cache, false)
 	assert.NoError(t, err)
 
 	val, err := cache.Get(job.Id)
@@ -26,7 +26,7 @@ func TestDeleteDoesNotExists(t *testing.T) {
 	jobOne.Init(cache)
 	jobTwo := GetMockJobWithGenericSchedule(time.Now())
 
-	err := jobTwo.Delete(cache)
+	err := jobTwo.Delete(cache, false)
 	assert.Error(t, err)
 
 	val, err := cache.Get(jobOne.Id)

@@ -96,7 +96,7 @@ var jobsTable = new Reef('#jobsTable', {
           <td>${job.name}</td>
           <td>${job.owner}</td>
           <td>${jobType(job.type)}</td>
-          <td>${job.disabled ? 'Disabled' : 'Enabled'}</td>
+          <td>${job.deleted ? 'Deleted' : job.disabled ? 'Disabled' : 'Enabled'}</td>
           <td>${job.metadata ? job.metadata.success_count + '/' + job.metadata.number_of_finished_runs : 0}</td>
           <td>${job.is_done}</td>
         </tr>
@@ -138,7 +138,7 @@ var jobDetail = new Reef('#jobDetailModal', {
               <p class="modal-card-title">
                 ${props.jobDetail.name}
                 <span class="tag ${props.jobDetail.disabled ? 'is-warning' : 'is-success'}">
-                  ${props.jobDetail.disabled ? 'Disabled' : 'Enabled'}
+                  ${props.jobDetail.deleted ? 'Deleted' : props.jobDetail.disabled ? 'Disabled' : 'Enabled'}
                 </span>
               </p>
               <button class="delete" aria-label="close" onclick="store.do('clearJobDetail')"></button>

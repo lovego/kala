@@ -129,8 +129,8 @@ func (d *Duration) RelativeTo(t time.Time) time.Duration {
 }
 
 func (d *Duration) Add(t time.Time) time.Time {
-	result := t
-	result = result.AddDate(d.Years, d.Months, d.Days+d.Weeks*7)
+	result := addYearsMonths(t, d.Years, d.Months)
+	result = result.AddDate(0, 0, d.Days+d.Weeks*7)
 	result = result.Add(time.Hour * time.Duration(d.Hours))
 	result = result.Add(time.Minute * time.Duration(d.Minutes))
 	result = result.Add(time.Second * time.Duration(d.Seconds))
@@ -150,4 +150,34 @@ func (d *Duration) IsZero() bool {
 		return true
 	}
 	return false
+}
+
+// 增加年和月数，同时处理超出月份天数的情况
+func addYearsMonths(t time.Time, addYears int, addMonths int) time.Time {
+	// 先增加年月并处理年月溢出
+	year := t.Year() + addYears
+	month := t.Month() + time.Month(addMonths)
+	year += (int(month) - 1) / 12
+	month = ((month - 1) % 12) + 1
+
+	// 构造目标日期，暂时用原日期的日
+	target := time.Date(year, month, t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), t.Location())
+
+	// 如果目标日期溢出（变成了下个月或更远），则设为该月最后一天
+	if target.Month() != month {
+		lastDay := lastDayOfMonth(year, month, t.Location())
+		target = time.Date(year, month, lastDay, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), t.Location())
+	}
+	return target
+}
+
+// 获取某月的最后一天
+func lastDayOfMonth(year int, month time.Month, loc *time.Location) int {
+	var nextMonth time.Time
+	if month == 12 {
+		nextMonth = time.Date(year+1, 1, 1, 0, 0, 0, 0, loc)
+	} else {
+		nextMonth = time.Date(year, month+1, 1, 0, 0, 0, 0, loc)
+	}
+	return nextMonth.AddDate(0, 0, -1).Day()
 }

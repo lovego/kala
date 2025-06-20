@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/garyburd/redigo/redis"
+	"github.com/lovego/kala/types"
 )
 
 var (
@@ -33,7 +34,7 @@ func clear(jobs ...*Job) error {
 func (j *Job) start() error {
 	conn := pool.Get()
 	defer conn.Close()
-	jobIds, err := runningJobs(conn, j.GroupName)
+	jobIds, err := groupRunningJobs(conn, j.GroupName)
 	if err != nil {
 		return err
 	}
@@ -60,15 +61,26 @@ func (j *Job) finish() error {
 
 // set job running
 func (j *Job) setRunning(conn redis.Conn) (bool, error) {
-	reply, err := redis.String(conn.Do("SET", runningKey(j.GroupName, j.Id), 1, "NX"))
+	reply, err := redis.String(conn.Do("SET", runningKey(j.GroupName, j.Id), j.Id, "NX"))
 	if err != nil && err != redis.ErrNil {
 		return false, err
 	}
 	return reply == "OK", nil
 }
 
+// job running stat
+func (j *Job) isRunning() (bool, error) {
+	conn := pool.Get()
+	defer conn.Close()
+	reply, err := redis.Int(conn.Do("EXISTS", runningKey(j.GroupName, j.Id)))
+	if err != nil && err != redis.ErrNil {
+		return false, err
+	}
+	return reply == 1, nil
+}
+
 // get running jobs
-func runningJobs(conn redis.Conn, group string) ([]string, error) {
+func groupRunningJobs(conn redis.Conn, group string) ([]string, error) {
 	jobs, err := redis.Strings(conn.Do("KEYS", runningKey(group, "")))
 	if err != nil && err != redis.ErrNil {
 		return nil, err
@@ -85,4 +97,33 @@ func runningKey(groupName, id string) string {
 		key += "-" + id
 	}
 	return key
+}
+
+func JobsRunning(jobs map[string]*types.Job) error {
+	if len(jobs) == 0 {
+		return nil
+	}
+	runningKeys := make([]interface{}, 0, len(jobs))
+	for k := range jobs {
+		if jobs[k].Disabled || jobs[k].Deleted || jobs[k].IsDone {
+			continue
+		}
+		runningKeys = append(runningKeys, runningKey(jobs[k].GroupName, jobs[k].Id))
+	}
+	if len(runningKeys) == 0 {
+		return nil
+	}
+	conn := pool.Get()
+	defer conn.Close()
+	running, err := redis.Strings(conn.Do("MGET", runningKeys...))
+	if err != nil && err != redis.ErrNil {
+		return err
+	}
+	for i := range running {
+		if _, ok := jobs[running[i]]; !ok {
+			continue
+		}
+		jobs[running[i]].IsRunning = true
+	}
+	return nil
 }

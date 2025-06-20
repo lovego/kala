@@ -32,7 +32,7 @@ func TestCache(t *testing.T) {
 func testCache(t *testing.T, cache JobCache) {
 
 	t.Run("TestCacheDeleteJobNotFound", func(t *testing.T) {
-		err := cache.Delete("not-a-real-id")
+		err := cache.Delete("not-a-real-id", false)
 		assert.Equal(t, ErrJobDoesntExist, err)
 	})
 
@@ -147,7 +147,7 @@ func testCachePersistence(t *testing.T, cache JobCache, db JobDB, shouldPersist 
 				assert.NoError(t, cache.Persist())
 			}
 
-			assert.NoError(t, cache.Delete(j.Id))
+			assert.NoError(t, cache.Delete(j.Id, false))
 			ret, err := db.Get(j.Id)
 			assert.IsType(t, ErrJobNotFound(""), err)
 			assert.Equal(t, (*Job)(nil), ret)
@@ -161,7 +161,7 @@ func testCachePersistence(t *testing.T, cache JobCache, db JobDB, shouldPersist 
 				}
 				assert.NoError(t, db.Delete(j.Id))
 
-				assert.Error(t, cache.Delete(j.Id))
+				assert.Error(t, cache.Delete(j.Id, false))
 				ret, err := cache.Get(j.Id)
 				if shouldPersist {
 					assert.NoError(t, err)

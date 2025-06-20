@@ -199,6 +199,8 @@ github.com/lovego/struct_tag v0.0.3 h1:7WDwH8jQv2hFFikoU05OdIOGS6riL2TEeGbminrY/
 github.com/lovego/struct_tag v0.0.3/go.mod h1:Q1otUkTCkcK/oo650zZiElIpQD2CAEJDZcjjhZ9aJnk=
 github.com/lovego/structs v0.0.3 h1:zZCWfJAjr6GFnl9ZBb7BUwfXLt4GAWJ6mUdDfXgzgBA=
 github.com/lovego/structs v0.0.3/go.mod h1:XsHdgZPde3XDzk3eJ49xfBSk2q+6nmYzrWK93sN7PQQ=
+github.com/lovego/time2 v0.0.6 h1:+0v6zuV9Bc09horOWtbiboaTTJLQ5nRokhmg2jFKin4=
+github.com/lovego/time2 v0.0.6/go.mod h1:ClEzffrh8wb5Xr5F7y4E6AiMxzDUhF6y0OCINPE7mdE=
 github.com/lovego/tracer v0.0.1/go.mod h1:cqfr/BqdkspXnph/SO8AOt58d+ziUGEzzM3OXMtI0rc=
 github.com/lovego/tracer v0.0.2 h1:lDD3v00VU8oRu/ajX+sj9M1Zf1T0/+QpjWEiqIxPDqM=
 github.com/lovego/tracer v0.0.2/go.mod h1:cqfr/BqdkspXnph/SO8AOt58d+ziUGEzzM3OXMtI0rc=

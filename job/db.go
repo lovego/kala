@@ -19,9 +19,9 @@ type JobDB interface {
 	Close() error
 }
 
-func (j *Job) Delete(cache JobCache) error {
+func (j *Job) Delete(cache JobCache, logical bool) error {
 	var err error
-	errOne := cache.Delete(j.Id)
+	errOne := cache.Delete(j.Id, logical)
 	if errOne != nil {
 		Logger.Errorf("Error occurred while trying to delete job from cache: %s", errOne)
 		err = errOne
@@ -40,7 +40,7 @@ func DeleteAll(cache JobCache) error {
 	allJobs.Lock.RUnlock()
 
 	for _, j := range jobsCopy {
-		if err := j.Delete(cache); err != nil {
+		if err := j.Delete(cache, false); err != nil {
 			return err
 		}
 	}

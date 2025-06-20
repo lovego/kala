@@ -16,7 +16,7 @@ const TABLE_NAME = "jobs"
 var (
 	tableSql = bsql.Table{
 		Name:        TABLE_NAME,
-		Desc:        "任务管理",
+		Desc:        "job scheduler",
 		Struct:      &job.Job{},
 		Constraints: []string{"UNIQUE(id)"},
 		ExtraSqls:   []string{"CREATE INDEX IF NOT EXISTS jobs_owner_name_idx ON jobs(owner,name);"},

@@ -25,6 +25,9 @@ type Job struct {
 	// Is this job disabled?
 	Disabled bool `json:"disabled"`
 
+	// Is this job deleted?
+	Deleted bool `json:"deleted"`
+
 	// Jobs that are dependent upon this one will be run after this job runs.
 	DependentJobs []string `json:"dependent_jobs"`
 
@@ -79,6 +82,11 @@ type Job struct {
 	// Says if a job has been executed right numbers of time
 	// and should not been executed again in the future
 	IsDone bool `json:"is_done"`
+
+	CreatedAt time.Time `json:"created_at"`
+
+	// job running stat from redis, not storage to db
+	IsRunning bool `json:"is_running" sql:"-"`
 }
 
 // RemoteProperties Custom properties for the remote job type

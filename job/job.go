@@ -143,7 +143,7 @@ func (j *Job) Init(cache JobCache) error {
 	j.lock.Lock()
 	if err != nil {
 		j.lock.Unlock()
-		_ = cache.Delete(j.Id)
+		_ = cache.Delete(j.Id, false)
 		j.lock.Lock()
 		return err
 	}
@@ -245,7 +245,7 @@ func (j *Job) GetWaitDuration() time.Duration {
 	j.lock.RLock()
 	defer j.lock.RUnlock()
 
-	waitDuration := time.Duration(j.scheduleTime.UnixNano() - j.clk.Time().Now().UnixNano())
+	waitDuration := j.scheduleTime.Sub(j.clk.Time().Now())
 
 	if waitDuration >= 0 {
 		return waitDuration
@@ -345,7 +345,7 @@ func (j *Job) DeleteFromDependentJobs(cache JobCache) error {
 		// If there are no other parent jobs, delete this job.
 		if len(childJob.ParentJobs) == 1 {
 			Logger.Infof("Deleting child %s", id)
-			_ = cache.Delete(childJob.Id)
+			_ = cache.Delete(childJob.Id, false)
 			continue
 		}
 
