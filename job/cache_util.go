@@ -30,13 +30,6 @@ func disable(j *Job, cache JobCache, persist bool) error {
 	if j.IsDone {
 		return errors.New("done job can not disable")
 	}
-	running, err := j.isRunning()
-	if err != nil {
-		return err
-	}
-	if running {
-		return errors.New("running job can not disable")
-	}
 	j.lock.Lock()
 	defer j.lock.Unlock()
 

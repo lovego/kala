@@ -146,7 +146,7 @@ func HandleJobDeleteRequest(cache job.JobCache) func(c *goa.Context) {
 		if err := j.Delete(cache, logical); err != nil {
 			c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
 		} else {
-			c.WriteHeader(http.StatusNoContent)
+			c.WriteHeader(http.StatusOK)
 		}
 	}
 }
@@ -158,7 +158,7 @@ func HandleDeleteAllJobs(cache job.JobCache) func(c *goa.Context) {
 		if err := job.DeleteAll(cache); err != nil {
 			c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
 		} else {
-			c.WriteHeader(http.StatusNoContent)
+			c.WriteHeader(http.StatusOK)
 		}
 	}
 }
@@ -176,7 +176,7 @@ func HandleStartJobRequest(cache job.JobCache) func(c *goa.Context) {
 
 		j.StopTimer()
 		j.Run(cache)
-		c.WriteHeader(http.StatusNoContent)
+		c.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -195,7 +195,7 @@ func HandleDisableJobRequest(cache job.JobCache) func(c *goa.Context) {
 			c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
 			return
 		}
-		c.WriteHeader(http.StatusNoContent)
+		c.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -214,7 +214,7 @@ func HandleEnableJobRequest(cache job.JobCache) func(c *goa.Context) {
 			c.StatusJson(http.StatusInternalServerError, apiError{Error: err.Error()})
 			return
 		}
-		c.WriteHeader(http.StatusNoContent)
+		c.WriteHeader(http.StatusOK)
 	}
 }
 
