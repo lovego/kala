@@ -283,9 +283,13 @@ func (c *LockFreeJobCache) Get(id string) (*Job, error) {
 
 func (c *LockFreeJobCache) GetAll() *JobsMap {
 	jm := NewJobsMap()
-	for el := range c.jobs.Iter() {
-		jm.Jobs[el.Key.(string)] = el.Value.(*Job)
+	jobs, _ := c.jobDB.GetAll()
+	for i := range jobs {
+		jm.Jobs[jobs[i].Id] = jobs[i]
 	}
+	// for el := range c.jobs.Iter() {
+	// 	jm.Jobs[el.Key.(string)] = el.Value.(*Job)
+	// }
 	return jm
 }
 

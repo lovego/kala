@@ -333,4 +333,5 @@ func (j *JobRunner) setHeaders(req *http.Request) {
 		j.job.RemoteProperties.Headers["Content-Type"] = []string{"application/json"}
 	}
 	req.Header = j.job.RemoteProperties.Headers
+	req.Header.Set("jobId", j.job.Id)
 }
