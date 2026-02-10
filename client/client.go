@@ -88,7 +88,7 @@ func (kc *KalaClient) do(method, url string, expectedStatus int, payload, target
 		return
 	}
 	defer resp.Body.Close()
-	if status := resp.StatusCode; status != expectedStatus {
+	if status := resp.StatusCode; status != http.StatusOK && status != expectedStatus {
 		return status, ErrGenericError
 	}
 	return resp.StatusCode, kc.decode(resp.Body, target)
